@@ -41,7 +41,7 @@ func TestHealthHandler(t *testing.T) {//
         // unmarshal key from json object to value
         api.Get(t, api.ReverseURL(t, "api:v1:health")).
             Do(context.Background()).
-            AssertStatus(http.StatusOK).
+            AssertStatus(t, http.StatusOK).
             Unmarshal(t, 
                 APIObject(t, "status", &status),
             )
@@ -51,21 +51,21 @@ func TestHealthHandler(t *testing.T) {//
         response := HealthResponse{}
         api.Get(t, api.ReverseURL(t, "api:v1:health")).
             Do(context.Background()).
-            AssertStatus(http.StatusOK).
+            AssertStatus(t, http.StatusOK).
             Unmarshal(t, &response)
 
         // assert json equals
         api.Get(t, api.ReverseURL(t, "api:v1:health")).
             Do(context.Background()).
-            AssertStatus(http.StatusOK).
-            AssertJsonEquals(HealthResponse{
+            AssertStatus(t, http.StatusOK).
+            AssertJsonEquals(t, HealthResponse{
                 Status: "ok",	
             })
 		
         // assert object key
         api.Get(t, api.ReverseURL(t, "api:v1:health")).
             Do(context.Background()).
-            AssertStatus(http.StatusOK).
+            AssertStatus(t, http.StatusOK).
             AssertJsonKeyEquals(t, "status", "ok")
 		
     })

@@ -65,7 +65,7 @@ func (j *jayson) Debug(logger *zap.Logger) {
 }
 
 // Error writes error response to the client
-func (j *jayson) Error(ctx context.Context, rw http.ResponseWriter, err error, extension ...Extension) {
+func (j *jayson) Error(ctx context.Context, rw http.ResponseWriter, err error, override ...Extension) {
 	if err == nil {
 		return
 	}
@@ -127,7 +127,7 @@ outer:
 		allExtensions = append(allExtensions, reg.extensions)
 	}
 	// add extensions passed in function
-	allExtensions = append(allExtensions, extension)
+	allExtensions = append(allExtensions, override)
 
 	// prepare executor
 	exec := newExecutor(allExtensions...)
@@ -265,7 +265,7 @@ func (j *jayson) RegisterResponse(what any, extensions ...Extension) error {
 }
 
 // Response writes response to the client
-func (j *jayson) Response(ctx context.Context, rw http.ResponseWriter, what any, ext ...Extension) {
+func (j *jayson) Response(ctx context.Context, rw http.ResponseWriter, what any, override ...Extension) {
 	// add object value to the context along with settings
 	ctx = contextWithObjectValue(
 		contextWithSettingsValue(ctx, j.settings),
@@ -275,13 +275,13 @@ func (j *jayson) Response(ctx context.Context, rw http.ResponseWriter, what any,
 	// rwInternal is a response writer that will be used to collect response
 	rwInternal := newResponseWriter(j.settings.DefaultResponseStatus)
 
-	// if what is an ext, we will be having object automatically
+	// if what is an override, we will be having object automatically
 	if extension, ok := what.(Extension); ok {
 		// create object
 		obj := make(map[string]any)
 
 		// prepare executor
-		exec := newExecutor(j.anyTypeExtensions, []Extension{extension}, ext)
+		exec := newExecutor(j.anyTypeExtensions, []Extension{extension}, override)
 
 		// extend response writer
 		exec.ExtendResponseWriter(ctx, rwInternal)
@@ -315,7 +315,7 @@ func (j *jayson) Response(ctx context.Context, rw http.ResponseWriter, what any,
 		}
 
 		// prepare executor with extensions (first what we found in registered types, then what is passed in function)
-		exec := newExecutor(j.anyTypeExtensions, regExtensions, ext)
+		exec := newExecutor(j.anyTypeExtensions, regExtensions, override)
 
 		// now extend response, no object here
 		exec.ExtendResponseWriter(ctx, rwInternal)

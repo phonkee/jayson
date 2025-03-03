@@ -41,8 +41,8 @@ func Debug(logger *zap.Logger) {
 }
 
 // Error writes error to _g instance of Jayson
-func Error(ctx context.Context, w http.ResponseWriter, err error, ext ...Extension) {
-	_g.Error(ctx, w, err, ext...)
+func Error(ctx context.Context, w http.ResponseWriter, err error, override ...Extension) {
+	_g.Error(ctx, w, err, override...)
 }
 
 // RegisterError registers extFunc for given error in _g instance of Jayson
@@ -56,6 +56,6 @@ func RegisterResponse(what any, ext ...Extension) error {
 }
 
 // Response writes response to http.ResponseWriter using _g instance of Jayson
-func Response(ctx context.Context, w http.ResponseWriter, what any, ext ...Extension) {
-	_g.Response(ctx, w, what, ext...)
+func Response(ctx context.Context, w http.ResponseWriter, what any, override ...Extension) {
+	_g.Response(ctx, w, what, override...)
 }

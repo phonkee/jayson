@@ -24,11 +24,15 @@ func testSettings() jayson.Settings {
 	return jayson.Settings{
 		DefaultErrorStatus:        http.StatusInternalServerError,
 		DefaultResponseStatus:     http.StatusOK,
-		DefaultErrorDetailKey:     ErrorDetailKey,
 		DefaultErrorMessageKey:    ErrorMessageKey,
 		DefaultErrorStatusCodeKey: ErrorStatusCodeKey,
 		DefaultErrorStatusTextKey: ErrorStatusTextKey,
 	}
+}
+
+// extErrorDetail is an extFunc that adds an error detail to the response object.
+func extErrorDetail(detail string) jayson.Extension {
+	return jayson.ExtObjectKeyValue("errorDetail", detail)
 }
 
 func TestNew(t *testing.T) {
@@ -87,14 +91,14 @@ func TestJayson_RegisterError(t *testing.T) {
 	t.Run("test register nil error panics", func(t *testing.T) {
 		jay := jayson.New(testSettings())
 		assert.Panics(t, func() {
-			_ = jay.RegisterError(nil, jayson.ExtErrorDetail("woah this is bad"))
+			_ = jay.RegisterError(nil, extErrorDetail("woah this is bad"))
 		})
 	})
 
 	t.Run("test register Any error sets defaults for unknown error", func(t *testing.T) {
 		jay := jayson.New(testSettings())
 		assert.NoError(t,
-			jay.RegisterError(jayson.Any, jayson.ExtErrorDetail("woah this is bad")),
+			jay.RegisterError(jayson.Any, extErrorDetail("woah this is bad")),
 		)
 
 		assertErrorJSON(t, jay, Error3, `{"`+ErrorStatusCodeKey+`":500,"`+ErrorDetailKey+`":"woah this is bad","`+ErrorMessageKey+`":"error3: error2: error1","`+ErrorStatusTextKey+`":"Internal Server Error"}`, http.StatusInternalServerError, nil)
@@ -112,7 +116,7 @@ func TestJayson_RegisterError(t *testing.T) {
 		)
 		assert.NoError(t,
 			jay.RegisterError(Error3,
-				jayson.ExtErrorDetail("some error"),
+				extErrorDetail("some error"),
 				jayson.ExtHeaderValue("X-Hello", "World"),
 				jayson.ExtNoop(),
 				jayson.ExtFunc(nil, nil),
@@ -126,7 +130,7 @@ func TestJayson_RegisterError(t *testing.T) {
 	t.Run("test unknown error", func(t *testing.T) {
 		jay := jayson.New(testSettings())
 		assert.NoError(t,
-			jay.RegisterError(jayson.Any, jayson.ExtErrorDetail("woah this is bad")),
+			jay.RegisterError(jayson.Any, extErrorDetail("woah this is bad")),
 		)
 		assert.NoError(t,
 			jay.RegisterError(Error3, jayson.ExtStatus(http.StatusTeapot)),

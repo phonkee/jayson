@@ -57,13 +57,6 @@ func ExtConditional(condition Extension, ext ...Extension) Extension {
 	)
 }
 
-// ExtErrorDetail is an extFunc that adds an error detail to the response object.
-func ExtErrorDetail(detail string) Extension {
-	return extSettingsKeyValue(func(s Settings) string {
-		return s.DefaultErrorDetailKey
-	}, detail)
-}
-
 // ExtFirst returns an extFunc that returns the first extFunc that extends the response.
 func ExtFirst(ext ...Extension) Extension {
 	return ExtFunc(

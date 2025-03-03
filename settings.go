@@ -7,8 +7,8 @@ import (
 // DefaultSettings returns default settings for jayson instance
 func DefaultSettings() Settings {
 	return Settings{
-		DefaultErrorStatus:        http.StatusInternalServerError,
-		DefaultErrorDetailKey:     "errorDetail",
+		DefaultErrorStatus: http.StatusInternalServerError,
+		//DefaultErrorDetailKey:     "errorDetail",
 		DefaultErrorMessageKey:    "message",
 		DefaultErrorStatusCodeKey: "code",
 		DefaultErrorStatusTextKey: "status",
@@ -18,8 +18,8 @@ func DefaultSettings() Settings {
 
 // Settings for jayson instance
 type Settings struct {
-	DefaultErrorStatus        int
-	DefaultErrorDetailKey     string
+	DefaultErrorStatus int
+	//DefaultErrorDetailKey string
 	DefaultErrorMessageKey    string
 	DefaultErrorStatusCodeKey string
 	DefaultErrorStatusTextKey string
@@ -30,9 +30,9 @@ func (s *Settings) Validate() {
 	if s.DefaultErrorStatus == 0 {
 		s.DefaultErrorStatus = http.StatusInternalServerError
 	}
-	if s.DefaultErrorDetailKey == "" {
-		s.DefaultErrorDetailKey = "errorDetail"
-	}
+	//if s.DefaultErrorDetailKey == "" {
+	//	s.DefaultErrorDetailKey = "errorDetail"
+	//}
 	if s.DefaultErrorMessageKey == "" {
 		s.DefaultErrorMessageKey = "message"
 	}

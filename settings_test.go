@@ -11,7 +11,6 @@ func TestSettings_Validate(t *testing.T) {
 	s.Validate()
 
 	assert.Equal(t, http.StatusInternalServerError, s.DefaultErrorStatus)
-	assert.Equal(t, "errorDetail", s.DefaultErrorDetailKey)
 	assert.Equal(t, "message", s.DefaultErrorMessageKey)
 	assert.Equal(t, "code", s.DefaultErrorStatusCodeKey)
 	assert.Equal(t, "status", s.DefaultErrorStatusTextKey)

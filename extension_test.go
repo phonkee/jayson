@@ -10,6 +10,11 @@ import (
 	"testing"
 )
 
+// extErrorDetail is an extFunc that adds an error detail to the response object.
+func extErrorDetail(detail string) Extension {
+	return ExtObjectKeyValue("errorDetail", detail)
+}
+
 func assertExtensionResponse(t *testing.T, expect string, obj any, ext ...Extension) {
 	jay := New(DefaultSettings())
 	rw := httptest.NewRecorder()
@@ -24,13 +29,13 @@ func TestExtension_Response(t *testing.T) {
 		assertExtensionResponse(t, `{"key":[1,2,3]}`, ExtObjectKeyValue("key", []int{1, 2, 3}))
 		assertExtensionResponse(t, `[1,2,3]`, []int{1, 2, 3})
 		assertExtensionResponse(t, `{"key":[1,2,3]}`, ExtObjectKeyValue("key", []int{1, 2, 3}), ExtNoop())
-		assertExtensionResponse(t, `{"errorDetail":"detail","key":[1,2,3]}`, ExtObjectKeyValue("key", []int{1, 2, 3}), ExtErrorDetail("detail"))
+		assertExtensionResponse(t, `{"errorDetail":"detail","key":[1,2,3]}`, ExtObjectKeyValue("key", []int{1, 2, 3}), extErrorDetail("detail"))
 	})
 
-	t.Run("test ExtErrorDetail", func(t *testing.T) {
-		assertExtensionResponse(t, `{"errorDetail":"detail"}`, ExtErrorDetail("detail"))
-		assertExtensionResponse(t, `{"errorDetail":"detail"}`, ExtErrorDetail("detail"), ExtNoop())
-		assertExtensionResponse(t, `{"errorDetail":"detail","key":[1,2,3]}`, ExtObjectKeyValue("key", []int{1, 2, 3}), ExtErrorDetail("detail"))
+	t.Run("test extErrorDetail", func(t *testing.T) {
+		assertExtensionResponse(t, `{"errorDetail":"detail"}`, extErrorDetail("detail"))
+		assertExtensionResponse(t, `{"errorDetail":"detail"}`, extErrorDetail("detail"), ExtNoop())
+		assertExtensionResponse(t, `{"errorDetail":"detail","key":[1,2,3]}`, ExtObjectKeyValue("key", []int{1, 2, 3}), extErrorDetail("detail"))
 	})
 
 	t.Run("test ExtObjectKeyValuef", func(t *testing.T) {
@@ -209,7 +214,7 @@ func TestOmitSettingsKey(t *testing.T) {
 		ext := ExtChain(
 			extOmitSettingsKey(
 				func(s Settings) []string {
-					return []string{s.DefaultErrorDetailKey}
+					return []string{s.DefaultErrorStatusCodeKey}
 				},
 			),
 		)
@@ -222,11 +227,11 @@ func TestOmitSettingsKey(t *testing.T) {
 	t.Run("test existing", func(t *testing.T) {
 		ext := ExtChain(
 			extSettingsKeyValue(func(s Settings) string {
-				return s.DefaultErrorDetailKey
+				return s.DefaultErrorStatusCodeKey
 			}, "hello"),
 			extOmitSettingsKey(
 				func(s Settings) []string {
-					return []string{s.DefaultErrorDetailKey}
+					return []string{s.DefaultErrorStatusCodeKey}
 				},
 			),
 		)

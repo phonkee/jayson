@@ -59,11 +59,11 @@ func init() {
 		jayson.G().RegisterError(jayson.Any, jayson.ExtObjectKeyValuef(TypeKey, "error")),
 	)
 	jayson.Must(
-		jayson.G().RegisterError(ErrorNotFound, jayson.ExtStatus(http.StatusInternalServerError)),
+		jayson.G().RegisterError(ErrorNotFound, jayson.ExtStatus(http.StatusNotFound)),
 	)
 	jayson.Must(
 		jayson.G().RegisterError(ErrorClientNotFound,
-			jayson.ExtStatus(http.StatusNotFound),
+			jayson.ExtStatus(http.StatusBadRequest),
 			ExtErrorDetail("client not found"),
 			jayson.ExtOmitObjectKey(TypeKey),
 		),
@@ -98,7 +98,9 @@ func ExampleError(err error, ext ...jayson.Extension) {
 	rw := httptest.NewRecorder()
 	jayson.G().Error(context.Background(), rw, err, ext...)
 
-	_, _, line, _ := runtime.Caller(1)
+	// get caller info
+	_, file, line, _ := runtime.Caller(1)
+	file = file[strings.LastIndex(file, "/")+1:]
 
-	fmt.Printf("Line: %v, Error: `%v`, Status: `%d`, Body: `%s`\n", line, err.Error(), rw.Code, strings.TrimSpace(rw.Body.String()))
+	fmt.Printf("File: %v, Line: %v, Error: `%v`, Status: `%d`, Body: `%s`\n", file, line, err.Error(), rw.Code, strings.TrimSpace(rw.Body.String()))
 }

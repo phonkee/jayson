@@ -69,10 +69,11 @@ type Jayson interface {
 }
 
 var (
+	Warning = errors.New("jayson: warning")
 	// ErrImproperlyConfigured is error returned when Jayson is improperly configured.
 	ErrImproperlyConfigured = errors.New("jayson: improperly configured")
 	ErrAlreadyRegistered    = fmt.Errorf("%w: already registered", ErrImproperlyConfigured)
-	WarnAlreadyRegistered   = errors.New("jayson: already registered")
+	WarnAlreadyRegistered   = fmt.Errorf("%w: already registered", Warning)
 )
 
 const (

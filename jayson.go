@@ -160,26 +160,8 @@ func (j *jayson) RegisterResponse(what any, extensions ...Extension) error {
 		return nil
 	}
 
-	// Get type of what
-	typ := reflect.TypeOf(what)
-
-	var alreadyRegistered bool
-
 	// register response type
-	if err := j.registryResponseTypes.Register(typ, extensions); err != nil {
-		if errors.Is(err, WarnAlreadyRegistered) {
-			alreadyRegistered = true
-		} else {
-			return err
-		}
-	}
-
-	// if type is already registered, return error
-	if alreadyRegistered {
-		return fmt.Errorf("%w: overwritten", ErrAlreadyRegistered)
-	}
-
-	return nil
+	return j.registryResponseTypes.Register(reflect.TypeOf(what), extensions)
 }
 
 // Response writes response to the client

@@ -43,4 +43,7 @@ func TestMust(t *testing.T) {
 	assert.NotPanics(t, func() {
 		Must()
 	})
+	assert.NotPanics(t, func() {
+		Must(WarnAlreadyRegistered)
+	})
 }

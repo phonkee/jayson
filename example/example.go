@@ -53,7 +53,7 @@ func ExtErrorDetail(detail string) jayson.Extension {
 	return jayson.ExtObjectKeyValue(ErrorDetailKey, detail)
 }
 
-func main() {
+func init() {
 	// register errors
 	jayson.Must(
 		jayson.G().RegisterError(jayson.Any, jayson.ExtObjectKeyValuef(TypeKey, "error")),
@@ -68,8 +68,9 @@ func main() {
 			jayson.ExtOmitObjectKey(TypeKey),
 		),
 	)
+}
 
-	// Now print examples
+func main() {
 	ExampleError(ErrorNotFound)
 	ExampleError(ErrorClientNotFound)
 	ExampleError(ErrorClientNotFound, ExtErrorDetail("client not found?"))

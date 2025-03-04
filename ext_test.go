@@ -266,3 +266,14 @@ func TestOmitSettingsKey(t *testing.T) {
 		assert.Empty(t, obj)
 	})
 }
+
+type testStruct struct {
+	Key string `json:"key"`
+}
+
+func TestExtObjectUnwrap(t *testing.T) {
+	ext := ExtObjectUnwrap(testStruct{Key: "hello"})
+	obj := make(map[string]any)
+	ext.ExtendResponseObject(context.Background(), obj)
+	assert.Equal(t, map[string]any{"key": "hello"}, obj)
+}

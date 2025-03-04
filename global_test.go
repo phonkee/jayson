@@ -25,14 +25,9 @@
 package jayson
 
 import (
-	"errors"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"testing"
-)
-
-var (
-	Error1 = errors.New("error1")
 )
 
 func TestReplaceGlobal(t *testing.T) {

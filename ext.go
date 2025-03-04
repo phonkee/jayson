@@ -199,19 +199,19 @@ func ExtObjectKeyValuef(key string, format string, args ...any) Extension {
 // It is useful if you want to add key/values to the response object (by altering it via Extensions).
 // It uses json package to marshal/unmarshal given object.
 // Warning if passed object does not marshal to json object, it will not be touched.
-func ExtObjectUnwrap(obj any) any {
+func ExtObjectUnwrap(obj any) Extension {
 	buf := bytes.Buffer{}
 
 	// unmarshal object to map[string]any
-	m := make(map[string]any)
+	objMap := make(map[string]any)
 
 	// try to marshal object via json, if it fails, return object as is
 	if err := json.NewEncoder(&buf).Encode(obj); err != nil {
-		m = nil
+		objMap = nil
 	} else {
 		// try to unmarshal object, if it fails, it returns an object as is
-		if err := json.NewDecoder(&buf).Decode(&m); err != nil {
-			m = nil
+		if err := json.NewDecoder(&buf).Decode(&objMap); err != nil {
+			objMap = nil
 		}
 	}
 
@@ -219,11 +219,11 @@ func ExtObjectUnwrap(obj any) any {
 		ExtFunc(
 			nil,
 			func(ctx context.Context, m map[string]any) bool {
-				if m == nil {
+				if objMap == nil {
 					s := ContextSettingsValue(ctx)
 					m[s.DefaultUnwrapObjectKey] = obj
 				} else {
-					for k, v := range m {
+					for k, v := range objMap {
 						m[k] = v
 					}
 				}

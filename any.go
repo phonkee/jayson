@@ -24,7 +24,7 @@
 
 package jayson
 
-// anyTarget is a type used to register any response/error object.
+// anyTarget is a type used to Register any response/error object.
 // it is used as base type for all response/error objects
 type anyTarget int
 

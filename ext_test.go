@@ -236,7 +236,7 @@ func TestExtOmitObjectKey(t *testing.T) {
 func TestOmitSettingsKey(t *testing.T) {
 	t.Run("test empty", func(t *testing.T) {
 		ext := ExtChain(
-			extOmitSettingsKey(
+			ExtOmitSettingsKey(
 				func(s Settings) []string {
 					return []string{s.DefaultErrorStatusCodeKey}
 				},
@@ -253,7 +253,7 @@ func TestOmitSettingsKey(t *testing.T) {
 			extSettingsKeyValue(func(s Settings) string {
 				return s.DefaultErrorStatusCodeKey
 			}, "hello"),
-			extOmitSettingsKey(
+			ExtOmitSettingsKey(
 				func(s Settings) []string {
 					return []string{s.DefaultErrorStatusCodeKey}
 				},

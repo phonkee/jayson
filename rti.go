@@ -24,11 +24,35 @@
 
 package jayson
 
-// reverseSlice reverses the order of elements in a slice.
-func reverseSlice[T any](s []T) []T {
-	r := make([]T, len(s))
-	for i := range s {
-		r[len(s)-1-i] = s[i]
+import (
+	"context"
+	"net/http"
+	"reflect"
+)
+
+// extWithResponseTypes returns an extension that sets the response type.
+func extWithResponseTypes(extension Extension, typ ...reflect.Type) Extension {
+	return &extResponseType{
+		ext:   extension,
+		types: typ,
 	}
-	return r
+}
+
+// extResponseType is an extension that provides the response type.
+type extResponseType struct {
+	ext   Extension
+	types []reflect.Type
+}
+
+// responseTypeIdentify returns the response type.
+func (e *extResponseType) responseTypes() []reflect.Type { return e.types }
+
+// ExtendResponseWriter extends the response writer.
+func (e *extResponseType) ExtendResponseWriter(ctx context.Context, writer http.ResponseWriter) bool {
+	return e.ext.ExtendResponseWriter(ctx, writer)
+}
+
+// ExtendResponseObject extends the response object.
+func (e *extResponseType) ExtendResponseObject(ctx context.Context, m map[string]any) bool {
+	return e.ext.ExtendResponseObject(ctx, m)
 }

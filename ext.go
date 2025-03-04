@@ -25,12 +25,15 @@
 package jayson
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 )
 
-// ExtChain returns an extFunc that chains multiple extensions together.
+// ExtChain returns an extFunc that chains multiple ext together.
 func ExtChain(extensions ...Extension) Extension {
 	return ExtFunc(
 		func(ctx context.Context, w http.ResponseWriter) (result bool) {
@@ -52,8 +55,8 @@ func ExtChain(extensions ...Extension) Extension {
 	)
 }
 
-// ExtConditional calls first extFunc, and if it returns true, it calls all the extensions.
-// This is useful for conditional extensions based on context (such as debug mode or any context values).
+// ExtConditional calls first extFunc, and if it returns true, it calls all the ext.
+// This is useful for conditional ext based on context (such as debug mode or any context values).
 func ExtConditional(condition Extension, ext ...Extension) Extension {
 	return ExtFunc(
 		func(ctx context.Context, w http.ResponseWriter) bool {
@@ -160,29 +163,80 @@ func ExtNoop() Extension {
 
 // ExtObjectKeyValue is an extFunc that adds a single key-value pair to the response object.
 func ExtObjectKeyValue(key string, value any) Extension {
-	return ExtFunc(
-		nil,
-		func(ctx context.Context, m map[string]any) bool {
-			m[key] = value
-			return true
-		},
+	return extWithResponseTypes(
+		ExtFunc(
+			nil,
+			func(ctx context.Context, m map[string]any) bool {
+				m[key] = value
+				return true
+			},
+		),
+		reflect.TypeOf(value),
 	)
 }
 
 // ExtObjectKeyValuef is an extFunc that adds a single key-value pair to the response object based on a format string.
 func ExtObjectKeyValuef(key string, format string, args ...any) Extension {
-	return ExtFunc(
-		nil,
-		func(ctx context.Context, m map[string]any) bool {
-			m[key] = fmt.Sprintf(format, args...)
-			return true
-		},
+	var types []reflect.Type
+
+	for _, arg := range args {
+		types = append(types, reflect.TypeOf(arg))
+	}
+
+	return extWithResponseTypes(
+		ExtFunc(
+			nil,
+			func(ctx context.Context, m map[string]any) bool {
+				m[key] = fmt.Sprintf(format, args...)
+				return true
+			},
+		),
+		types...,
+	)
+}
+
+// ExtObjectUnwrap is an Extension that converts the given object to the response object.
+// It is useful if you want to add key/values to the response object (by altering it via Extensions).
+// It uses json package to marshal/unmarshal given object.
+// Warning if passed object does not marshal to json object, it will not be touched.
+func ExtObjectUnwrap(obj any) any {
+	buf := bytes.Buffer{}
+
+	// unmarshal object to map[string]any
+	m := make(map[string]any)
+
+	// try to marshal object via json, if it fails, return object as is
+	if err := json.NewEncoder(&buf).Encode(obj); err != nil {
+		m = nil
+	} else {
+		// try to unmarshal object, if it fails, it returns an object as is
+		if err := json.NewDecoder(&buf).Decode(&m); err != nil {
+			m = nil
+		}
+	}
+
+	return extWithResponseTypes(
+		ExtFunc(
+			nil,
+			func(ctx context.Context, m map[string]any) bool {
+				if m == nil {
+					s := ContextSettingsValue(ctx)
+					m[s.DefaultUnwrapObjectKey] = obj
+				} else {
+					for k, v := range m {
+						m[k] = v
+					}
+				}
+				return true
+			},
+		),
+		reflect.TypeOf(obj),
 	)
 }
 
 // ExtOmitObjectKey is an extFunc that removes the given keys from the response object.
 // This extFunc needs to be called at the end,
-// so it removes the keys after all other extensions have added their keys.
+// so it removes the keys after all other ext have added their keys.
 func ExtOmitObjectKey(keys ...string) Extension {
 	return ExtFunc(
 		nil,
@@ -223,8 +277,8 @@ func extSettingsKeyValue(fn func(s Settings) string, value any) Extension {
 	)
 }
 
-// extOmitSettingsKey is an extFunc that removes the given keys from the response object based on the settings.
-func extOmitSettingsKey(fn func(settings Settings) []string) Extension {
+// ExtOmitSettingsKey is an extFunc that removes the given keys from the response object based on the settings.
+func ExtOmitSettingsKey(fn func(settings Settings) []string) Extension {
 	return ExtFunc(
 		nil,
 		func(ctx context.Context, m map[string]any) (result bool) {

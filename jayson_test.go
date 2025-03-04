@@ -112,14 +112,14 @@ func assertResponseJSON(t *testing.T, jay jayson.Jayson, obj any, expect string,
 
 func TestJayson_RegisterError(t *testing.T) {
 
-	t.Run("test register nil error panics", func(t *testing.T) {
+	t.Run("test Register nil error panics", func(t *testing.T) {
 		jay := jayson.New(testSettings())
 		assert.Panics(t, func() {
 			_ = jay.RegisterError(nil, extErrorDetail("woah this is bad"))
 		})
 	})
 
-	t.Run("test register Any error sets defaults for unknown error", func(t *testing.T) {
+	t.Run("test Register Any error sets defaults for unknown error", func(t *testing.T) {
 		jay := jayson.New(testSettings())
 		assert.NoError(t,
 			jay.RegisterError(jayson.Any, extErrorDetail("woah this is bad")),
@@ -128,10 +128,10 @@ func TestJayson_RegisterError(t *testing.T) {
 		assertErrorJSON(t, jay, Error3, `{"`+ErrorStatusCodeKey+`":500,"`+ErrorDetailKey+`":"woah this is bad","`+ErrorMessageKey+`":"error3: error2: error1","`+ErrorStatusTextKey+`":"Internal Server Error"}`, http.StatusInternalServerError, nil)
 	})
 
-	t.Run("should register extFunc for given error", func(t *testing.T) {
+	t.Run("should Register extFunc for given error", func(t *testing.T) {
 		jay := jayson.New(testSettings())
 
-		// register error
+		// Register error
 		assert.NoError(t,
 			jay.RegisterError(Error1, jayson.ExtObjectKeyValue("answer_to_anything", "42"), jayson.ExtStatus(http.StatusTeapot)),
 		)
@@ -163,7 +163,7 @@ func TestJayson_RegisterError(t *testing.T) {
 		assertErrorJSON(t, jay, Error2, `{"`+ErrorStatusCodeKey+`":500,"`+ErrorDetailKey+`":"woah this is bad","`+ErrorMessageKey+`":"error2: error1","`+ErrorStatusTextKey+`":"Internal Server Error"}`, http.StatusInternalServerError, nil)
 	})
 
-	t.Run("test inherit extensions from wrapped error", func(t *testing.T) {
+	t.Run("test inherit ext from wrapped error", func(t *testing.T) {
 		jay := jayson.New(testSettings())
 		assert.NoError(t,
 			jay.RegisterError(Error1, jayson.ExtStatus(http.StatusTeapot)),
@@ -201,15 +201,19 @@ func TestJayson_Response(t *testing.T) {
 	})
 
 	t.Run("test json marshal panics", func(t *testing.T) {
-		jay := jayson.New(testSettings())
-		assert.Panics(t, func() {
-			rw := httptest.NewRecorder()
-			jay.Response(context.Background(), rw, SomeWrongType(1))
+		t.Run("raw json marshal panics", func(t *testing.T) {
+			jay := jayson.New(testSettings())
+			assert.Panics(t, func() {
+				rw := httptest.NewRecorder()
+				jay.Response(context.Background(), rw, SomeWrongType(1))
+			})
 		})
-
-		assert.Panics(t, func() {
-			rw := httptest.NewRecorder()
-			jay.Response(context.Background(), rw, jayson.ExtObjectKeyValue("key", SomeWrongType(1)))
+		t.Run("extension panics", func(t *testing.T) {
+			jay := jayson.New(testSettings())
+			assert.Panics(t, func() {
+				rw := httptest.NewRecorder()
+				jay.Response(context.Background(), rw, jayson.ExtObjectKeyValue("key", SomeWrongType(1)))
+			})
 		})
 
 	})
@@ -245,7 +249,7 @@ func TestJayson_RegisterResponse_AnyResponse(t *testing.T) {
 
 func TestJayson_Debug(t *testing.T) {
 	t.Run("test enable debug", func(t *testing.T) {
-		t.Run("test register response", func(t *testing.T) {
+		t.Run("test Register response", func(t *testing.T) {
 			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
 			observedLogger := zap.New(observedZapCore)
 
@@ -259,7 +263,7 @@ func TestJayson_Debug(t *testing.T) {
 			assert.Len(t, observedLogs.All(), 1)
 		})
 
-		t.Run("test register error", func(t *testing.T) {
+		t.Run("test Register error", func(t *testing.T) {
 			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
 			observedLogger := zap.New(observedZapCore)
 

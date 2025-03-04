@@ -33,7 +33,6 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"reflect"
-	"sync"
 )
 
 // New instantiates custom jayson instance. Usually you don't need to use it, since there is a _g instance.
@@ -42,21 +41,21 @@ func New(settings Settings) Jayson {
 	settings.Validate()
 
 	return &jayson{
-		settings: settings,
-		errors:   make(map[error]*registeredError),
-		types:    make(map[reflect.Type]*registeredType),
+		settings:              settings,
+		registryErrors:        newRegistry[error](),
+		registryResponseTypes: newRegistry[reflect.Type](),
 	}
 }
 
 // jayson implements Jayson interface
 type jayson struct {
-	debug              *zap.Logger
-	settings           Settings
-	anyErrorExtensions []Extension
-	anyTypeExtensions  []Extension
-	errors             map[error]*registeredError
-	types              map[reflect.Type]*registeredType
-	mutex              sync.RWMutex
+	debug    *zap.Logger
+	settings Settings
+
+	// registry for errors
+	registryErrors *registry[error]
+	// registry for response types
+	registryResponseTypes *registry[reflect.Type]
 }
 
 // Debug enables debug mode via zap logger
@@ -70,43 +69,10 @@ func (j *jayson) Error(ctx context.Context, rw http.ResponseWriter, err error, o
 		return
 	}
 
-	// mark original error
-	originalError := err
+	// get error extensions
+	ext, _ := j.getErrorExtensions(err, override...)
 
-	// get registered error
-	var reg *registeredError
-
-	// find registered error
-	var ok bool
-
-	// collect all registered errors
-	allRegisteredErrors := make([]*registeredError, 0)
-
-	// lock errors for read access
-	j.mutex.RLock()
-outer:
-	for {
-		// check if we have registered error
-		if reg, ok = j.errors[err]; ok {
-			allRegisteredErrors = append(allRegisteredErrors, reg)
-		}
-
-		// get parent error so we can check it
-		err = errors.Unwrap(err)
-
-		if err == nil {
-			break outer
-		}
-	}
-	j.mutex.RUnlock()
-
-	// no error found, apply unknown error extensions
-	if len(allRegisteredErrors) > 0 {
-		// reverse errors
-		allRegisteredErrors = reverseSlice(allRegisteredErrors)
-	}
-
-	// add error value to the context along with settings
+	// prepare context
 	ctx = contextWithErrorValue(
 		contextWithSettingsValue(ctx, j.settings),
 		err,
@@ -114,35 +80,29 @@ outer:
 
 	// rwInternal
 	obj := map[string]any{
-		j.settings.DefaultErrorMessageKey: originalError.Error(),
+		j.settings.DefaultErrorMessageKey: err.Error(),
 	}
+
+	// prepare internal response writer
 	rwInternal := newResponseWriter(j.settings.DefaultErrorStatus)
 
-	// prepare extensions
-	allExtensions := [][]Extension{
-		j.anyErrorExtensions,
-	}
-	// add all found extensions (from registered errors)
-	for _, reg := range allRegisteredErrors {
-		allExtensions = append(allExtensions, reg.extensions)
-	}
-	// add extensions passed in function
-	allExtensions = append(allExtensions, override)
-
 	// prepare executor
-	exec := newExecutor(allExtensions...)
+	exec := newExecutor(ext)
 
 	// now extend response
 	exec.ExtendResponseWriter(ctx, rwInternal)
 
-	// now extend object
-	exec.ExtendResponseObject(ctx, obj)
-
+	// now add additional properties to object
 	// handle status code and text
 	obj[j.settings.DefaultErrorStatusCodeKey] = rwInternal.statusCode
+
+	// handle status text
 	if text := http.StatusText(rwInternal.statusCode); text != "" {
 		obj[j.settings.DefaultErrorStatusTextKey] = text
 	}
+
+	// now extend object
+	exec.ExtendResponseObject(ctx, obj)
 
 	// clear buffer here
 	rwInternal.buffer = bytes.Buffer{}
@@ -165,39 +125,22 @@ func (j *jayson) RegisterError(err error, ext ...Extension) error {
 	j.debugLogMethod("RegisterError", func() []zap.Field {
 		return []zap.Field{
 			zap.String("type", reflect.TypeOf(err).String()),
-			zap.Int("extensions", len(ext)),
+			zap.Int("ext", len(ext)),
 		}
 	})
-
-	j.mutex.Lock()
-	defer j.mutex.Unlock()
 
 	// if err is nil, this is error
 	if err == nil {
 		panic(fmt.Errorf("%w: error is nil", ErrImproperlyConfigured))
 	}
 
-	// if Any, we will register extensions for any error
+	// if Any, we will Register ext for any error
 	if errors.Is(err, Any) {
-		j.anyErrorExtensions = append(j.anyErrorExtensions, ext...)
+		j.registryErrors.AddShared(ext...)
 		return nil
 	}
 
-	// check if error is already registered
-	// if so, we will update extensions but return error
-	_, exists := j.errors[err]
-
-	j.errors[err] = &registeredError{
-		err:        err,
-		extensions: ext,
-	}
-
-	// if error is already registered, return error
-	if exists {
-		return fmt.Errorf("%w: overwritten", ErrAlreadyRegistered)
-	}
-
-	return nil
+	return j.registryErrors.Register(err, ext)
 }
 
 // RegisterResponse registers extFunc for given object
@@ -207,57 +150,32 @@ func (j *jayson) RegisterResponse(what any, extensions ...Extension) error {
 	j.debugLogMethod("RegisterResponse", func() []zap.Field {
 		return []zap.Field{
 			zap.Any("type", reflect.TypeOf(what).String()),
-			zap.Int("extensions", len(extensions)),
+			zap.Int("ext", len(extensions)),
 		}
 	})
 
-	j.mutex.Lock()
-	defer j.mutex.Unlock()
-
-	// if what is Any, we will register extensions for any response object
+	// if what is Any, we will Register ext for any response object
 	if what == Any {
-		j.anyTypeExtensions = append(j.anyTypeExtensions, extensions...)
+		j.registryResponseTypes.AddShared(extensions...)
 		return nil
 	}
 
-	// get type of what
+	// Get type of what
 	typ := reflect.TypeOf(what)
 
-	// check if type exists
-	_, exists := j.types[typ]
+	var alreadyRegistered bool
 
-	// prepare registered type
-	j.types[typ] = &registeredType{
-		typ:        typ,
-		extensions: extensions,
-	}
-
-	// now we want to add a special case for pointer types
-	switch typ.Kind() {
-	case reflect.Ptr:
-		// if type is pointer, let's also register non-pointer value (if not already registered)
-		typ = typ.Elem()
-		if _, ok := j.types[typ]; !ok {
-			j.types[typ] = &registeredType{
-				typ:        typ,
-				extensions: extensions,
-			}
+	// register response type
+	if err := j.registryResponseTypes.Register(typ, extensions); err != nil {
+		if errors.Is(err, WarnAlreadyRegistered) {
+			alreadyRegistered = true
+		} else {
+			return err
 		}
-	case reflect.Struct:
-		// if type is struct, let's also register pointer value (if not already registered)
-		typ = reflect.PointerTo(typ)
-		if _, ok := j.types[typ]; !ok {
-			j.types[typ] = &registeredType{
-				typ:        typ,
-				extensions: extensions,
-			}
-		}
-	default:
-		// do nothing
 	}
 
 	// if type is already registered, return error
-	if exists {
+	if alreadyRegistered {
 		return fmt.Errorf("%w: overwritten", ErrAlreadyRegistered)
 	}
 
@@ -277,61 +195,158 @@ func (j *jayson) Response(ctx context.Context, rw http.ResponseWriter, what any,
 
 	// if what is an override, we will be having object automatically
 	if extension, ok := what.(Extension); ok {
-		// create object
-		obj := make(map[string]any)
-
-		// prepare executor
-		exec := newExecutor(j.anyTypeExtensions, []Extension{extension}, override)
-
-		// extend response writer
-		exec.ExtendResponseWriter(ctx, rwInternal)
-
-		// extend object
-		exec.ExtendResponseObject(ctx, obj)
-
-		// now clear buffer
-		rwInternal.buffer = bytes.Buffer{}
-
-		// json marshal object
-		if err := json.NewEncoder(rwInternal).Encode(obj); err != nil {
-			panic(err)
-		}
+		j.responseExtension(ctx, rwInternal, what, extension, override...)
 	} else {
-		var (
-			reg *registeredType
-		)
-
-		// get registered type
-		j.mutex.RLock()
-		reg, _ = j.types[reflect.TypeOf(what)]
-		j.mutex.RUnlock()
-
-		// prepare extensions that will be applied
-		var regExtensions []Extension
-
-		// if we found registered type, use its extensions
-		if reg != nil {
-			regExtensions = reg.extensions
-		}
-
-		// prepare executor with extensions (first what we found in registered types, then what is passed in function)
-		exec := newExecutor(j.anyTypeExtensions, regExtensions, override)
-
-		// now extend response, no object here
-		exec.ExtendResponseWriter(ctx, rwInternal)
-
-		// assign buffer
-		rwInternal.buffer = bytes.Buffer{}
-
-		// now json encode object
-		if err := json.NewEncoder(rwInternal).Encode(what); err != nil {
-			panic(err)
-		}
+		j.responseRaw(ctx, rwInternal, what, override...)
 	}
 
 	// set content type
 	rwInternal.Header()["Content-Type"] = []string{"application/json"}
 	rwInternal.WriteTo(rw)
+}
+
+// responseExtension is called when `what` is an extension
+func (j *jayson) responseExtension(ctx context.Context, rw *responseWriter, what any, whatExt Extension, override ...Extension) {
+	// create object
+	obj := make(map[string]any)
+
+	// this fixes the order of extensions
+	override = append([]Extension{whatExt}, override...)
+
+	// types of what so we can Get ext
+	var types []reflect.Type
+
+	// check if extension is responseTypes so we can Get type
+	if rti, ok := whatExt.(responseTypes); ok {
+		types = rti.responseTypes()
+	}
+	if len(types) == 0 {
+		types = []reflect.Type{reflect.TypeOf(what)}
+	}
+
+	var (
+		ext []Extension
+		ok  bool
+	)
+
+	// now range over types and first that returns true is used
+	for _, typ := range types {
+		if ext, ok = j.getResponseTypeExtensions(typ, override...); ok {
+			break
+		}
+	}
+
+	// prepare executor
+	exec := newExecutor(ext)
+
+	// extend response writer
+	exec.ExtendResponseWriter(ctx, rw)
+
+	// extend object
+	exec.ExtendResponseObject(ctx, obj)
+
+	// now clear buffer if someone mistakenly wrote to it
+	rw.buffer = bytes.Buffer{}
+
+	// json marshal object
+	if err := json.NewEncoder(rw).Encode(obj); err != nil {
+		panic(err)
+	}
+}
+
+// responseRaw is called when `what` is not an extension
+func (j *jayson) responseRaw(ctx context.Context, rw *responseWriter, what any, override ...Extension) {
+	ext, ok := j.getResponseTypeExtensions(reflect.TypeOf(what), override...)
+	_ = ok
+	// prepare executor with ext (first what we found in registered types, then what is passed in function)
+	exec := newExecutor(ext)
+
+	// now extend response, no object here
+	exec.ExtendResponseWriter(ctx, rw)
+
+	// now clear buffer if someone mistakenly wrote to it
+	rw.buffer = bytes.Buffer{}
+
+	// now json encode object
+	if err := json.NewEncoder(rw).Encode(what); err != nil {
+		panic(err)
+	}
+}
+
+// getErrorExtensions returns all extensions for given error
+// it also adds extensions for all parent errors and Any
+// even when false is returned, extensions are returned
+func (j *jayson) getErrorExtensions(err error, override ...Extension) ([]Extension, bool) {
+	var (
+		result []Extension
+		found  bool
+	)
+
+	for err != nil {
+		// we prepend errors
+		if ext, ok := j.registryErrors.Get(err); ok {
+			result = append(ext, result...)
+			found = true
+		}
+
+		err = errors.Unwrap(err)
+	}
+
+	// add shared extensions
+	result = j.registryErrors.WithShared(result...)
+	// and append override
+	result = append(result, override...)
+
+	return result, found
+}
+
+// getResponseTypeExtensionsBare returns all extensions for given response type
+// no other extensions are added (no default, no overrides
+func (j *jayson) getResponseTypeExtensionsBare(what reflect.Type, level int) ([]Extension, bool) {
+	var (
+		ext []Extension
+		ok  bool
+	)
+
+	// check exact type
+	if ext, ok = j.registryResponseTypes.Get(what); !ok {
+		switch what.Kind() {
+		case reflect.Ptr:
+			// check if we have extension for pointer type
+			if ext, ok = j.registryResponseTypes.Get(what); !ok && level == 0 {
+
+				// if we are on zero level, we will try to Get extension for Elem
+				return j.getResponseTypeExtensionsBare(what.Elem(), level+1)
+			}
+		case reflect.Slice, reflect.Array:
+			ext, ok = j.getResponseTypeExtensionsBare(what.Elem(), 0)
+		default:
+			if ext, ok = j.registryResponseTypes.Get(what); !ok && level == 0 {
+				return j.getResponseTypeExtensionsBare(reflect.PointerTo(what), level+1)
+			}
+		}
+	}
+
+	return ext, ok
+}
+
+// getResponseTypeExtensions returns all extensions for given response type
+// it also adds extensions for pointer types, slices
+// even when false is returned, extensions are returned
+func (j *jayson) getResponseTypeExtensions(what reflect.Type, override ...Extension) ([]Extension, bool) {
+	var (
+		ext []Extension
+		ok  bool
+	)
+
+	// check exact type
+	ext, ok = j.getResponseTypeExtensionsBare(what, 0)
+
+	ext = j.registryResponseTypes.WithShared(ext...)
+
+	ext = append(ext, override...)
+
+	return ext, ok
 }
 
 // debugLogMethod logs caller info
@@ -342,7 +357,7 @@ func (j *jayson) debugLogMethod(method string, fn ...func() []zap.Field) {
 
 	// check if we are on debug level
 	if ch := j.debug.Named("jayson").Check(zap.DebugLevel, "caller info"); ch != nil {
-		// try to get caller info
+		// try to Get caller info
 		caller := newCallerInfo(DebugMaxCallerDepth)
 
 		fields := []zap.Field{
@@ -358,16 +373,4 @@ func (j *jayson) debugLogMethod(method string, fn ...func() []zap.Field) {
 
 		ch.Write(fields...)
 	}
-}
-
-// registeredError holds error and its extensions
-type registeredError struct {
-	err        error
-	extensions []Extension
-}
-
-// registeredType holds type and its extensions
-type registeredType struct {
-	typ        reflect.Type
-	extensions []Extension
 }

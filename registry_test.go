@@ -29,19 +29,35 @@ import (
 	"testing"
 )
 
-func TestReverseSlice(t *testing.T) {
+func TestRegistryNew(t *testing.T) {
+	r := newRegistry[error]()
+	assert.NotNil(t, r)
+}
 
-	for _, item := range []struct {
-		input  []int
-		output []int
-	}{
-		{[]int{1, 2, 3, 4, 5}, []int{5, 4, 3, 2, 1}},
-		{[]int{1, 2, 3, 4, 5, 6}, []int{6, 5, 4, 3, 2, 1}},
-		{[]int{1, 2, 3, 4, 5, 6, 7}, []int{7, 6, 5, 4, 3, 2, 1}},
-		{[]int{}, []int{}},
-		{nil, []int{}},
-	} {
-		result := reverseSlice(item.input)
-		assert.Equal(t, item.output, result)
-	}
+func TestRegistryExists(t *testing.T) {
+	r := newRegistry[error]()
+	assert.NotNil(t, r)
+
+	// check if error Exists
+	assert.False(t, r.Exists(assert.AnError))
+	assert.NoError(t, r.Register(assert.AnError, nil))
+	assert.True(t, r.Exists(assert.AnError))
+}
+
+func TestRegistryGet(t *testing.T) {
+	r := newRegistry[error]()
+	assert.NotNil(t, r)
+
+	// Get should return false
+	_, ok := r.Get(assert.AnError)
+	assert.False(t, ok)
+
+	// now register type
+	ext := []Extension{ExtFunc(nil, nil)}
+	assert.NoError(t, r.Register(assert.AnError, ext))
+
+	// Get should return true
+	e, ok := r.Get(assert.AnError)
+	assert.True(t, ok)
+	assert.Equal(t, ext, e)
 }

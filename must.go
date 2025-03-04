@@ -24,10 +24,12 @@
 
 package jayson
 
+import "errors"
+
 // Must panics if err is not nil, otherwise it returns the value.
 func Must(err ...error) {
 	for _, e := range err {
-		if e != nil {
+		if e != nil && !errors.Is(e, Warning) {
 			panic(e)
 		}
 	}

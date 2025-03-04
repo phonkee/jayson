@@ -36,6 +36,7 @@ func DefaultSettings() Settings {
 		DefaultErrorStatusCodeKey: "code",
 		DefaultErrorStatusTextKey: "status",
 		DefaultResponseStatus:     http.StatusOK,
+		DefaultUnwrapObjectKey:    "object",
 	}
 }
 
@@ -46,6 +47,7 @@ type Settings struct {
 	DefaultErrorStatusCodeKey string
 	DefaultErrorStatusTextKey string
 	DefaultResponseStatus     int
+	DefaultUnwrapObjectKey    string // if unwrap fails, object will be placed under this key
 }
 
 func (s *Settings) Validate() {
@@ -63,5 +65,8 @@ func (s *Settings) Validate() {
 	}
 	if s.DefaultResponseStatus == 0 {
 		s.DefaultResponseStatus = http.StatusOK
+	}
+	if s.DefaultUnwrapObjectKey == "" {
+		s.DefaultUnwrapObjectKey = "object"
 	}
 }

@@ -30,9 +30,10 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"net/http"
+	"reflect"
 )
 
-// Extension is the interface for Jayson extensions.
+// Extension is the interface for Jayson ext.
 //
 // It is used to alter the response or the object before it is sent to the client.
 //
@@ -71,9 +72,17 @@ var (
 	// ErrImproperlyConfigured is error returned when Jayson is improperly configured.
 	ErrImproperlyConfigured = errors.New("jayson: improperly configured")
 	ErrAlreadyRegistered    = fmt.Errorf("%w: already registered", ErrImproperlyConfigured)
+	WarnAlreadyRegistered   = errors.New("jayson: already registered")
 )
 
 const (
 	// DebugMaxCallerDepth is the maximum depth of debug caller
 	DebugMaxCallerDepth = 255
 )
+
+// responseTypes is an internal interface that identifies the response types.
+// It is used in ExtObjectUnwrap to identify the type of the object.
+type responseTypes interface {
+	// responseTypes returns the type of the type passed
+	responseTypes() []reflect.Type
+}

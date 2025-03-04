@@ -72,6 +72,9 @@ func init() {
 
 func main() {
 	ExampleError(ErrorNotFound)
+	ExampleError(ErrorNotFound, jayson.ExtOmitSettingsKey(func(settings jayson.Settings) []string {
+		return []string{settings.DefaultErrorStatusCodeKey, settings.DefaultErrorStatusTextKey}
+	}))
 	ExampleError(ErrorClientNotFound)
 	ExampleError(ErrorClientNotFound, ExtErrorDetail("client not found?"))
 	ExampleError(ErrorClientNotFound, jayson.ExtOmitObjectKey(ErrorDetailKey))

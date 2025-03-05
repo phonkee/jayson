@@ -267,13 +267,41 @@ func TestOmitSettingsKey(t *testing.T) {
 	})
 }
 
+type embeddedStruct struct {
+	Other string `json:"other,omitempty"`
+}
 type testStruct struct {
-	Key string `json:"key"`
+	Key       string `json:"key"`
+	Skip      string `json:"-"`
+	OmitEmpty bool   `json:",omitempty"`
+	embeddedStruct
 }
 
 func TestExtObjectUnwrap(t *testing.T) {
-	ext := ExtObjectUnwrap(testStruct{Key: "hello"})
-	obj := make(map[string]any)
-	ext.ExtendResponseObject(context.Background(), obj)
-	assert.Equal(t, map[string]any{"key": "hello"}, obj)
+	t.Run("test simple", func(t *testing.T) {
+		ext := ExtObjectUnwrap(testStruct{Key: "hello"})
+		obj := make(map[string]any)
+		ext.ExtendResponseObject(context.Background(), obj)
+		assert.Equal(t, map[string]any{"key": "hello"}, obj)
+	})
+	t.Run("test embedded", func(t *testing.T) {
+		ext := ExtObjectUnwrap(testStruct{Key: "hello", embeddedStruct: embeddedStruct{Other: "world"}})
+		obj := make(map[string]any)
+		ext.ExtendResponseObject(context.Background(), obj)
+		assert.Equal(t, map[string]any{"key": "hello", "other": "world"}, obj)
+	})
+	t.Run("test omitempty", func(t *testing.T) {
+		ext := ExtObjectUnwrap(
+			testStruct{
+				Key: "hello",
+				embeddedStruct: embeddedStruct{
+					Other: "world",
+				},
+				OmitEmpty: true,
+			},
+		)
+		obj := make(map[string]any)
+		ext.ExtendResponseObject(context.Background(), obj)
+		assert.Equal(t, map[string]any{"key": "hello", "other": "world", "OmitEmpty": true}, obj)
+	})
 }

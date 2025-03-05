@@ -25,12 +25,11 @@
 package jayson
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 )
 
 // ExtChain returns an extFunc that chains multiple ext together.
@@ -197,22 +196,27 @@ func ExtObjectKeyValuef(key string, format string, args ...any) Extension {
 
 // ExtObjectUnwrap is an Extension that converts the given object to the response object.
 // It is useful if you want to add key/values to the response object (by altering it via Extensions).
-// It uses json package to marshal/unmarshal given object.
-// Warning if passed object does not marshal to json object, it will not be touched.
+// If the object is a struct, it will be converted to a map[string]any.
 func ExtObjectUnwrap(obj any) Extension {
-	buf := bytes.Buffer{}
-
 	// unmarshal object to map[string]any
 	objMap := make(map[string]any)
 
-	// try to marshal object via json, if it fails, return object as is
-	if err := json.NewEncoder(&buf).Encode(obj); err != nil {
-		objMap = nil
-	} else {
-		// try to unmarshal object, if it fails, it returns an object as is
-		if err := json.NewDecoder(&buf).Decode(&objMap); err != nil {
-			objMap = nil
+	// try to inspect struct/map type and add it to the response object
+	val := reflect.ValueOf(obj)
+
+	// if object is a pointer, dereference it
+	for val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	switch val.Kind() {
+	case reflect.Struct:
+		structToMap(val, objMap)
+	case reflect.Map:
+		for key, value := range val.MapKeys() {
+			objMap[fmt.Sprintf("%v", key)] = val.MapIndex(value).Interface()
 		}
+	default:
+		objMap = nil
 	}
 
 	return extWithResponseTypes(
@@ -232,6 +236,66 @@ func ExtObjectUnwrap(obj any) Extension {
 		),
 		reflect.TypeOf(obj),
 	)
+}
+
+// isEmptyValue checks if a value is empty (zero value).
+func isEmptyValue(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Interface, reflect.Ptr:
+		return v.IsNil()
+	default:
+		// no-op
+	}
+	return false
+}
+
+// parseJSONTag parses json tag and returns field name, omitempty and skip values.
+func parseJSONTag(tag string, name string) (fieldName string, omitempty bool, skip bool) {
+	// Check for "omitempty" in the tag
+	tagParts := strings.Split(tag, ",")
+	fieldName = tagParts[0]
+	if fieldName == "" {
+		fieldName = name
+	}
+	omitempty = len(tagParts) > 1 && tagParts[1] == "omitempty"
+	skip = len(tagParts) > 0 && tagParts[0] == "-"
+	return fieldName, omitempty, skip
+}
+
+// structToMap converts a struct to a map[string]any.
+func structToMap(val reflect.Value, into map[string]any) {
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Type().Field(i)
+		// skip unexported fields
+		if field.PkgPath != "" {
+			if !field.Anonymous {
+				continue
+			}
+			structToMap(val.Field(i), into)
+			continue
+		}
+
+		// parse json tag
+		fieldName, omitEmpty, skip := parseJSONTag(field.Tag.Get("json"), field.Name)
+		if skip {
+			continue
+		}
+		if omitEmpty && isEmptyValue(val.Field(i)) {
+			continue
+		}
+
+		into[fieldName] = val.Field(i).Interface()
+	}
 }
 
 // ExtOmitObjectKey is an extFunc that removes the given keys from the response object.

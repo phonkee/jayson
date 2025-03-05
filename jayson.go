@@ -134,6 +134,11 @@ func (j *jayson) RegisterError(err error, ext ...Extension) error {
 		panic(fmt.Errorf("%w: error is nil", ErrImproperlyConfigured))
 	}
 
+	// check for Extended interface
+	if extended, ok := err.(Extended); ok {
+		ext = append(extended.Extensions(), ext...)
+	}
+
 	// if Any, we will Register ext for any error
 	if errors.Is(err, Any) {
 		j.registryErrors.AddShared(ext...)
@@ -265,6 +270,10 @@ func (j *jayson) getErrorExtensions(err error, override ...Extension) ([]Extensi
 	)
 
 	for err != nil {
+		if extended, ok := err.(Extended); ok {
+			result = append(extended.Extensions(), result...)
+		}
+
 		// we prepend errors
 		if ext, ok := j.registryErrors.Get(err); ok {
 			result = append(ext, result...)

@@ -175,6 +175,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
+# TODO:
+
+- [ ] ExtObjectUnwrap should not use json marshal/unmarshal but read struct/map fields directly
+
 # Author
 
 Peter Vrba <phonkee@phonkee.eu>

@@ -54,6 +54,18 @@ func ExtErrorDetail(detail string) jayson.Extension {
 }
 
 func init() {
+	// setup custom global settings
+	jayson.ReplaceGlobal(
+		jayson.New(jayson.Settings{
+			DefaultErrorStatus:        http.StatusInternalServerError,
+			DefaultErrorMessageKey:    "message",
+			DefaultErrorStatusCodeKey: "code",
+			DefaultErrorStatusTextKey: "status_text",
+			DefaultResponseStatus:     http.StatusOK,
+			DefaultUnwrapObjectKey:    "_object",
+		}),
+	)
+
 	// register errors
 	jayson.Must(
 		jayson.G().RegisterError(jayson.Any, jayson.ExtObjectKeyValuef(TypeKey, "error")),
@@ -71,6 +83,7 @@ func init() {
 }
 
 func main() {
+	fmt.Print("\nExample errors:\n\n")
 	ExampleError(ErrorNotFound)
 	ExampleError(ErrorNotFound, jayson.ExtOmitSettingsKey(func(settings jayson.Settings) []string {
 		return []string{settings.DefaultErrorStatusCodeKey, settings.DefaultErrorStatusTextKey}
@@ -88,6 +101,31 @@ func main() {
 		jayson.ExtOmitObjectKey(ErrorDetailKey),
 		jayson.ExtStatus(http.StatusAccepted),
 	)
+
+	// Example of wrapping error
+	ExampleError(jayson.WrapError(ErrorClientNotFound, jayson.ExtStatus(http.StatusTeapot)))
+
+	fmt.Print("\nExample responses:\n\n")
+
+	// Response examples
+	ExampleResponse(
+		&TestStruct{
+			Name: "John",
+		},
+	)
+	ExampleResponse(
+		&TestStruct{
+			Name: "John",
+		},
+		jayson.ExtStatus(http.StatusTeapot),
+	)
+	ExampleResponse(
+		jayson.ExtObjectUnwrap(&TestStruct{
+			Name: "John",
+		}),
+		jayson.ExtStatus(http.StatusTeapot),
+		jayson.ExtObjectKeyValue("key", "value"),
+	)
 }
 
 type TestStruct struct {
@@ -103,4 +141,15 @@ func ExampleError(err error, ext ...jayson.Extension) {
 	file = file[strings.LastIndex(file, "/")+1:]
 
 	fmt.Printf("File: %v, Line: %v, Error: `%v`, Status: `%d`, Body: `%s`\n", file, line, err.Error(), rw.Code, strings.TrimSpace(rw.Body.String()))
+}
+
+func ExampleResponse(what any, ext ...jayson.Extension) {
+	rw := httptest.NewRecorder()
+	jayson.G().Response(context.Background(), rw, what, ext...)
+
+	// get caller info
+	_, file, line, _ := runtime.Caller(1)
+	file = file[strings.LastIndex(file, "/")+1:]
+
+	fmt.Printf("File: %v, Line: %v, Status: `%d`, Body: `%s`\n", file, line, rw.Code, strings.TrimSpace(rw.Body.String()))
 }

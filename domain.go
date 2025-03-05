@@ -87,3 +87,9 @@ type responseTypes interface {
 	// responseTypes returns the type of the type passed
 	responseTypes() []reflect.Type
 }
+
+// Extended is interface for errors that can be extended.
+type Extended interface {
+	// Extensions returns list of extensions for the error.
+	Extensions() []Extension
+}

@@ -33,7 +33,7 @@ import (
 )
 
 // WithHttpServer runs a new HTTP server with the provided handler and calls the provided function with the server address.
-func WithHttpServer(t *testing.T, handler http.Handler, fn func(address string)) {
+func WithHttpServer(t *testing.T, handler http.Handler, fn func(t *testing.T, address string)) {
 	// listen to the first available port
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	assert.NoError(t, err)
@@ -54,7 +54,7 @@ func WithHttpServer(t *testing.T, handler http.Handler, fn func(address string))
 	}()
 
 	// call function with address
-	fn(lis.Addr().String())
+	fn(t, lis.Addr().String())
 
 	// shutdown server
 	assert.NoError(t, srv.Shutdown(context.Background()))

@@ -104,7 +104,7 @@ func TestAPI(t *testing.T) {
 		router := newHealthRouter(t)
 
 		t.Run("test error", func(t *testing.T) {
-			WithHttpServer(t, router, func(address string) {
+			WithHttpServer(t, router, func(t *testing.T, address string) {
 				WithAPI(t, &Deps{
 					Router:  router,
 					Address: address,
@@ -122,7 +122,7 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("test success", func(t *testing.T) {
-			WithHttpServer(t, router, func(address string) {
+			WithHttpServer(t, router, func(t *testing.T, address string) {
 				WithAPI(t, &Deps{
 					Router:  router,
 					Address: address,

@@ -26,7 +26,9 @@ package tester
 
 import (
 	"context"
+	"github.com/phonkee/jayson/tester/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"io"
 	"net/http"
 	"strings"
@@ -56,7 +58,43 @@ func TestRequest_Header(t *testing.T) {
 }
 
 func TestRequest_Query(t *testing.T) {
+	for _, item := range []struct {
+		name     string
+		url      string
+		query    map[string]string
+		expected string
+	}{
+		{
+			name:     "test query",
+			query:    map[string]string{"key": "value"},
+			expected: "key=value",
+		},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			rt := mocks.NewRoundTripper(t)
 
+			rt.On("RoundTrip", mock.MatchedBy(func(req *http.Request) bool {
+				return req.URL.RawQuery == item.expected
+			})).Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+			r := newRequest(
+				http.MethodGet,
+				item.url,
+				&Deps{
+					Address: "localhost:8080",
+					Client: &http.Client{
+						Transport: rt,
+					},
+				},
+			)
+			for key, value := range item.query {
+				r.Query(t, key, value)
+			}
+			r.Do(t, context.Background()).AssertStatus(t, http.StatusOK)
+		})
+	}
 }
 
 func TestRequest_Body(t *testing.T) {

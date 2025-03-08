@@ -249,7 +249,6 @@ func TestClient_ReverseURL(t *testing.T) {
 			})
 			api.ReverseURL(m, "api:v1:health")
 		})
-
 	})
 
 	t.Run("test missing route", func(t *testing.T) {

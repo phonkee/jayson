@@ -80,11 +80,6 @@ func (r *request) Do(t require.TestingT, ctx context.Context) APIResponse {
 	req, err := http.NewRequestWithContext(ctx, r.method, r.path, r.body)
 	assert.NoErrorf(t, err, "failed to create request: %v", err)
 
-	// check if we have headers
-	if r.header == nil {
-		r.header = make(http.Header)
-	}
-
 	// set content type to json
 	r.header.Set(ContentTypeHeader, ContentTypeJSON)
 
@@ -94,9 +89,15 @@ func (r *request) Do(t require.TestingT, ctx context.Context) APIResponse {
 	// prepare recorder for response
 	rw := httptest.NewRecorder()
 
-	// add query if present
+	// merge query if present
 	if len(r.query) > 0 {
-		req.URL.RawQuery = r.query.Encode()
+		q := req.URL.Query()
+		for key, values := range r.query {
+			for _, value := range values {
+				q.Add(key, value)
+			}
+		}
+		req.URL.RawQuery = q.Encode()
 	}
 
 	// add header if present
@@ -163,18 +164,13 @@ func (r *request) doHandler(t require.TestingT, rw http.ResponseWriter, req *htt
 
 // Header sets the header of the request
 func (r *request) Header(t require.TestingT, key, value string) APIRequest {
-	if r.header == nil {
-		r.header = make(http.Header)
-	}
 	r.header.Add(key, value)
 	return r
 }
 
 // Query sets the query of the request
 func (r *request) Query(t require.TestingT, key, value string) APIRequest {
-	if r.query == nil {
-		r.query = make(url.Values)
-	}
+	r.query = make(url.Values)
 	r.query.Add(key, value)
 	return r
 }

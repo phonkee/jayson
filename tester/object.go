@@ -29,13 +29,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"reflect"
-	"testing"
 )
 
 // APIObject gives ability to unmarshall json object into multiple fields
-func APIObject(t *testing.T, kv ...any) any {
+func APIObject(t require.TestingT, kv ...any) any {
 	if len(kv)%2 != 0 {
-		t.Fatal("APIObject: odd number of arguments")
+		require.Fail(t, "APIObject: odd number of arguments")
+		return nil
 	}
 
 	m := make(map[string]any)
@@ -62,7 +62,7 @@ func APIObject(t *testing.T, kv ...any) any {
 // object is a helper struct for unmarshalling json object into multiple fields
 type object struct {
 	kv map[string]any
-	T  *testing.T
+	T  require.TestingT
 }
 
 func (o *object) UnmarshalJSON(bytes []byte) error {

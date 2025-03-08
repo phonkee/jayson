@@ -26,53 +26,63 @@ package tester
 
 import (
 	"context"
-	"testing"
+	"github.com/stretchr/testify/require"
 )
 
 // APIClient is the interface for testing the rest APIClient
 type APIClient interface {
 	// Delete does a DELETE response to the APIClient
-	Delete(t *testing.T, path string) APIRequest
+	Delete(t require.TestingT, path string) APIRequest
 
 	// Get does a GET response to the APIClient
-	Get(t *testing.T, path string) APIRequest
+	Get(t require.TestingT, path string) APIRequest
 
 	// Post does a POST response to the APIClient
-	Post(t *testing.T, path string) APIRequest
+	Post(t require.TestingT, path string) APIRequest
 
 	// Put does a PUT response to the APIClient
-	Put(t *testing.T, path string) APIRequest
+	Put(t require.TestingT, path string) APIRequest
 
 	// Request does a response to the APIClient
-	Request(t *testing.T, method string, path string) APIRequest
+	Request(t require.TestingT, method string, path string) APIRequest
 
 	// ReverseURL creates a path by given url name and url arguments
-	ReverseURL(t *testing.T, name string, vars ...string) string
+	ReverseURL(t require.TestingT, name string, vars ...string) string
 }
 
 // APIRequest is the interface for testing the rest APIClient response
 type APIRequest interface {
 	// Body sets the body of the request
-	Body(t *testing.T, body any) APIRequest
+	Body(t require.TestingT, body any) APIRequest
 	// Do perform the request and returns the response
-	Do(t *testing.T, ctx context.Context) APIResponse
+	Do(t require.TestingT, ctx context.Context) APIResponse
 	// Header sets the header of the request
-	Header(t *testing.T, key, value string) APIRequest
+	Header(t require.TestingT, key, value string) APIRequest
 	// Query sets the query of the request
-	Query(t *testing.T, key, value string) APIRequest
+	Query(t require.TestingT, key, value string) APIRequest
 }
 
 // APIResponse is the interface for testing the rest APIClient response
 type APIResponse interface {
+	// AssertHeaderValue asserts that response header has given value for given key
+	AssertHeaderValue(t require.TestingT, key, value string) APIResponse
+
 	// AssertJsonEquals asserts that response body is equal to given json
-	AssertJsonEquals(t *testing.T, what any) APIResponse
+	AssertJsonEquals(t require.TestingT, what any) APIResponse
 
 	// AssertJsonKeyEquals asserts that response body key is equal to given value
-	AssertJsonKeyEquals(t *testing.T, key string, what any) APIResponse
+	AssertJsonKeyEquals(t require.TestingT, key string, what any) APIResponse
 
 	// AssertStatus asserts that response status is equal to given status
-	AssertStatus(t *testing.T, status int) APIResponse
+	AssertStatus(t require.TestingT, status int) APIResponse
 
 	// Unmarshal json unmarshalls whole response body into given value
-	Unmarshal(t *testing.T, v any) APIResponse
+	Unmarshal(t require.TestingT, v any) APIResponse
 }
+
+const (
+	// ContentTypeHeader is the content type header
+	ContentTypeHeader = "Content-Type"
+	// ContentTypeJSON is the content type for json
+	ContentTypeJSON = "application/json"
+)

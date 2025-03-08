@@ -25,18 +25,12 @@
 package tester
 
 import (
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// MockRequireTestingT is a mock implementation of the require.TestingT interface.
+// TestingT is a mock implementation of the require.TestingT interface.
 //
-//go:generate mockery --name MockRequireTestingT --filename require_testing.go
-type MockRequireTestingT interface {
+//go:generate mockery --name TestingT --filename testing.go
+type TestingT interface {
 	require.TestingT
-}
-
-//go:generate mockery --name MockAssertTestingT --filename assert_testing.go
-type MockAssertTestingT interface {
-	assert.TestingT
 }

@@ -22,9 +22,10 @@
  * SOFTWARE.
  */
 
-package tester
+package tester_test
 
 import (
+	"github.com/phonkee/jayson/tester"
 	"github.com/phonkee/jayson/tester/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -36,23 +37,24 @@ import (
 func TestDeps_Validate(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		for _, item := range []struct {
-			deps *Deps
+			deps *tester.Deps
 		}{
-			{&Deps{Router: nil, Handler: http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}), Address: ""}},
-			{&Deps{Router: nil, Handler: nil, Address: "localhost:8080"}},
+			{&tester.Deps{Router: nil, Handler: http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}), Address: ""}},
+			{&tester.Deps{Router: nil, Handler: nil, Address: "localhost:8080"}},
 		} {
-			m := mocks.NewMockRequireTestingT(t)
-			item.deps.Validate(require.New(m))
+			//m := mocks.NewTestingT(t)
+			// TODO:
+			item.deps.Validate(require.New(nil))
 		}
 	})
 
 	t.Run("invalid", func(t *testing.T) {
 		for _, item := range []struct {
-			deps *Deps
+			deps *tester.Deps
 		}{
-			{&Deps{Router: nil, Handler: nil, Address: ""}},
+			{&tester.Deps{Router: nil, Handler: nil, Address: ""}},
 		} {
-			m := mocks.NewMockRequireTestingT(t)
+			m := mocks.NewTestingT(t)
 			m.On("Errorf", mock.Anything, mock.MatchedBy(func(msg string) bool {
 				return strings.Contains(msg, "exampleHandler or Address is required")
 			})).Once()

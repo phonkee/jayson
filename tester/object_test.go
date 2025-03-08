@@ -25,26 +25,27 @@
 package tester
 
 import (
-	"context"
-	"github.com/stretchr/testify/assert"
-	"net/http"
+	"github.com/phonkee/jayson/tester/mocks"
+	"github.com/stretchr/testify/mock"
+	"strings"
 	"testing"
 )
 
-// noopHandler does nothing for testing purposes
-type noopHandler struct{}
-
-func (n noopHandler) ServeHTTP(writer http.ResponseWriter, r *http.Request) {}
-
-func TestRequest_Header(t *testing.T) {
-	r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}})
-	r.Header(t, "key", "value")
-	r.Do(t, context.Background())
-	assert.Equal(t, []string{ContentTypeJSON}, r.header.Values(ContentTypeHeader))
-	assert.Equal(t, ContentTypeJSON, r.header.Get(ContentTypeHeader))
-	assert.Equal(t, "value", r.header.Get("key"))
+// MatchByStringContains matches string by substring
+func matchByStringContains(s string) func(in string) bool {
+	return func(in string) bool {
+		return strings.Contains(in, s)
+	}
 }
 
-func TestRequest_Query(t *testing.T) {
-
+func TestAPIObject(t *testing.T) {
+	t.Run("test odd number of arguments", func(t *testing.T) {
+		m := mocks.NewTestingT(t)
+		m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains("APIObject: odd number of arguments"))).Once()
+		m.On("FailNow")
+		APIObject(m, "key")
+		m.AssertExpectations(t)
+		m.AssertNumberOfCalls(t, "Errorf", 1)
+		m.AssertNumberOfCalls(t, "FailNow", 1)
+	})
 }

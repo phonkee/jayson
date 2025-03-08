@@ -35,7 +35,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
-	"testing"
 )
 
 // newRequest creates a new *request instance
@@ -44,6 +43,7 @@ func newRequest(method, path string, deps *Deps) *request {
 		method: method,
 		path:   path,
 		deps:   deps,
+		header: make(http.Header),
 	}
 }
 
@@ -58,7 +58,7 @@ type request struct {
 }
 
 // Body sets the body of the request
-func (r *request) Body(t *testing.T, body any) APIRequest {
+func (r *request) Body(t require.TestingT, body any) APIRequest {
 	switch body.(type) {
 	case string:
 		r.body = strings.NewReader(body.(string))
@@ -75,9 +75,20 @@ func (r *request) Body(t *testing.T, body any) APIRequest {
 }
 
 // Do does the request and returns the response
-func (r *request) Do(t *testing.T, ctx context.Context) APIResponse {
+func (r *request) Do(t require.TestingT, ctx context.Context) APIResponse {
 	req, err := http.NewRequestWithContext(ctx, r.method, r.path, r.body)
 	assert.NoErrorf(t, err, "failed to create request: %v", err)
+
+	// check if we have headers
+	if r.header == nil {
+		r.header = make(http.Header)
+	}
+
+	// set content type to json
+	r.header.Set(ContentTypeHeader, ContentTypeJSON)
+
+	// set headers to request
+	req.Header = r.header
 
 	// prepare recorder for response
 	rw := httptest.NewRecorder()
@@ -100,10 +111,7 @@ func (r *request) Do(t *testing.T, ctx context.Context) APIResponse {
 	}
 
 	// prepare response
-	result := &response{
-		rw:      rw,
-		request: req,
-	}
+	result := newResponse(rw, req)
 
 	// add body when present
 	if rw.Body != nil {
@@ -114,7 +122,7 @@ func (r *request) Do(t *testing.T, ctx context.Context) APIResponse {
 }
 
 // doAddress does the request to the address
-func (r *request) doAddress(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+func (r *request) doAddress(t require.TestingT, rw http.ResponseWriter, req *http.Request) {
 	// prepare client without any timeout since we add context to the request
 	hc := &http.Client{}
 
@@ -141,14 +149,14 @@ func (r *request) doAddress(t *testing.T, rw http.ResponseWriter, req *http.Requ
 }
 
 // doHandler does the request to the handler
-func (r *request) doHandler(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+func (r *request) doHandler(t require.TestingT, rw http.ResponseWriter, req *http.Request) {
 	assert.NotPanicsf(t, func() {
 		r.deps.Handler.ServeHTTP(rw, req)
 	}, "handler panicked")
 }
 
 // Header sets the header of the request
-func (r *request) Header(t *testing.T, key, value string) APIRequest {
+func (r *request) Header(t require.TestingT, key, value string) APIRequest {
 	if r.header == nil {
 		r.header = make(http.Header)
 	}
@@ -157,7 +165,7 @@ func (r *request) Header(t *testing.T, key, value string) APIRequest {
 }
 
 // Query sets the query of the request
-func (r *request) Query(t *testing.T, key, value string) APIRequest {
+func (r *request) Query(t require.TestingT, key, value string) APIRequest {
 	if r.query == nil {
 		r.query = make(url.Values)
 	}

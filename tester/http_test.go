@@ -22,9 +22,10 @@
  * SOFTWARE.
  */
 
-package tester
+package tester_test
 
 import (
+	"github.com/phonkee/jayson/tester"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
@@ -43,7 +44,7 @@ func TestWithHttpServer(t *testing.T) {
 			assert.Panics(
 				t,
 				func() {
-					WithHttpServer(
+					tester.WithHttpServer(
 						t,
 						item.handler,
 						item.fn,
@@ -55,7 +56,7 @@ func TestWithHttpServer(t *testing.T) {
 
 	t.Run("test valid args", func(t *testing.T) {
 		value := 0
-		WithHttpServer(
+		tester.WithHttpServer(
 			t,
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				value++

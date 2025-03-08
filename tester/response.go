@@ -32,8 +32,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
-	"testing"
 )
+
+// newResponse creates a new *response instance
+func newResponse(rw *httptest.ResponseRecorder, request *http.Request) *response {
+	return &response{
+		rw:      rw,
+		request: request,
+	}
+}
 
 // response is the implementation of APIResponse
 type response struct {
@@ -42,8 +49,19 @@ type response struct {
 	body    []byte
 }
 
+// AssertHeaderValue asserts that response header value is equal to given value
+func (r *response) AssertHeaderValue(t require.TestingT, key, value string) APIResponse {
+	for _, v := range r.rw.Result().Header[key] {
+		if v == value {
+			return r
+		}
+	}
+	require.Failf(t, "fail", "header `%s` not found or does not have value", key)
+	return r
+}
+
 // AssertJsonEquals asserts that response body is equal to given json string or object/map
-func (r *response) AssertJsonEquals(t *testing.T, expected any) APIResponse {
+func (r *response) AssertJsonEquals(t require.TestingT, expected any) APIResponse {
 	require.NotNilf(t, r.body, "response body is nil")
 
 	var expectedStr string
@@ -66,7 +84,7 @@ func (r *response) AssertJsonEquals(t *testing.T, expected any) APIResponse {
 // AssertJsonKeyEquals asserts that response body key is equal to given value
 // This method uses bit of magic to unmarshal json object into given value.
 // It inspects the type of the given value and unmarshalls the json object into same type.
-func (r *response) AssertJsonKeyEquals(t *testing.T, key string, what any) APIResponse {
+func (r *response) AssertJsonKeyEquals(t require.TestingT, key string, what any) APIResponse {
 	require.NotNilf(t, r.body, "response body is nil")
 
 	var val reflect.Value
@@ -94,13 +112,13 @@ func (r *response) AssertJsonKeyEquals(t *testing.T, key string, what any) APIRe
 }
 
 // AssertStatus asserts that response status is equal to given status
-func (r *response) AssertStatus(t *testing.T, status int) APIResponse {
+func (r *response) AssertStatus(t require.TestingT, status int) APIResponse {
 	require.Equal(t, status, r.rw.Code)
 	return r
 }
 
 // Unmarshal unmarshalls whole response body into given value
-func (r *response) Unmarshal(t *testing.T, v any) APIResponse {
+func (r *response) Unmarshal(t require.TestingT, v any) APIResponse {
 	require.NotNilf(t, r.body, "response body is nil")
 	require.NoError(t, json.NewDecoder(bytes.NewReader(r.body)).Decode(v))
 	return r

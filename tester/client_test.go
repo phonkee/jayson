@@ -22,26 +22,29 @@
  * SOFTWARE.
  */
 
-package tester
+package tester_test
 
 import (
 	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"github.com/phonkee/jayson/tester"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 	"time"
 )
 
-type HealthResponse struct {
+// exampleResponse is a response struct for testing
+type exampleResponse struct {
 	Status string `json:"status"`
 	Host   string `json:"host"`
 }
 
-func HealthHandler(w http.ResponseWriter, r *http.Request) {
+// exampleHandler is a handler for testing
+func exampleHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(HealthResponse{
+	if err := json.NewEncoder(w).Encode(exampleResponse{
 		Status: "something",
 		Host:   "localhost",
 	}); err != nil {
@@ -51,17 +54,17 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 
 func newHealthRouter(t *testing.T) *mux.Router {
 	router := mux.NewRouter()
-	router.HandleFunc("/api/v1/health", HealthHandler).Methods(http.MethodGet).Name("api:v1:health")
+	router.HandleFunc("/api/v1/health", exampleHandler).Methods(http.MethodGet).Name("api:v1:health")
 	return router
 }
 
 func TestAPI(t *testing.T) {
 	t.Run("test handler", func(t *testing.T) {
 		router := newHealthRouter(t)
-		WithAPI(t, &Deps{
+		tester.WithAPI(t, &tester.Deps{
 			Router:  router,
 			Handler: router,
-		}, func(api APIClient) {
+		}, func(api tester.APIClient) {
 			// context first
 			ctx := context.Background()
 
@@ -75,7 +78,7 @@ func TestAPI(t *testing.T) {
 			statusValue := "something"
 
 			// response struct
-			rr := HealthResponse{}
+			rr := exampleResponse{}
 
 			// do response
 			api.Request(t, http.MethodGet, api.ReverseURL(t, "api:v1:health")).
@@ -83,7 +86,7 @@ func TestAPI(t *testing.T) {
 				AssertStatus(t, http.StatusOK).
 				AssertJsonEquals(t, `{"status": "something", "host": "localhost"}`).
 				Unmarshal(t,
-					APIObject(t,
+					tester.APIObject(t,
 						"status", &status,
 						"host", &host,
 					),
@@ -104,11 +107,11 @@ func TestAPI(t *testing.T) {
 		router := newHealthRouter(t)
 
 		t.Run("test error", func(t *testing.T) {
-			WithHttpServer(t, router, func(t *testing.T, address string) {
-				WithAPI(t, &Deps{
+			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
+				tester.WithAPI(t, &tester.Deps{
 					Router:  router,
 					Address: address,
-				}, func(api APIClient) {
+				}, func(api tester.APIClient) {
 					// context first
 					ctx, cf := context.WithTimeout(context.Background(), time.Second*2)
 					defer cf()
@@ -122,11 +125,11 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("test success", func(t *testing.T) {
-			WithHttpServer(t, router, func(t *testing.T, address string) {
-				WithAPI(t, &Deps{
+			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
+				tester.WithAPI(t, &tester.Deps{
 					Router:  router,
 					Address: address,
-				}, func(api APIClient) {
+				}, func(api tester.APIClient) {
 					// context first
 					ctx, cf := context.WithTimeout(context.Background(), time.Second*2)
 					defer cf()
@@ -141,7 +144,7 @@ func TestAPI(t *testing.T) {
 					statusValue := "something"
 
 					// response struct
-					rr := HealthResponse{}
+					rr := exampleResponse{}
 
 					// do response
 					api.Request(t, http.MethodGet, api.ReverseURL(t, "api:v1:health")).
@@ -149,7 +152,7 @@ func TestAPI(t *testing.T) {
 						AssertStatus(t, http.StatusOK).
 						AssertJsonEquals(t, `{"status": "something", "host": "localhost"}`).
 						Unmarshal(t,
-							APIObject(t,
+							tester.APIObject(t,
 								"status", &status,
 								"host", &host,
 							),

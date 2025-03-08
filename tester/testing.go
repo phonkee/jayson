@@ -25,28 +25,18 @@
 package tester
 
 import (
-	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net/http"
-	"strings"
 )
 
-// Deps is the dependencies for the APIClient
-// Router is optional, if not provided, ReverseURL will not work
-// One of Handler or Address is required
-type Deps struct {
-	// Router - currently required
-	Router *mux.Router
-	// Handler is the http.Handler
-	Handler http.Handler
-	// Addr is the address of the server
-	Address string
+// MockRequireTestingT is a mock implementation of the require.TestingT interface.
+//
+//go:generate mockery --name MockRequireTestingT --filename require_testing.go
+type MockRequireTestingT interface {
+	require.TestingT
 }
 
-// Validate deps
-func (d *Deps) Validate(ass *require.Assertions) {
-	// clean address
-	d.Address = strings.TrimSpace(d.Address)
-	// check if exampleHandler or Address is provided
-	ass.Falsef(d.Handler == nil && d.Address == "", "exampleHandler or Address is required")
+//go:generate mockery --name MockAssertTestingT --filename assert_testing.go
+type MockAssertTestingT interface {
+	assert.TestingT
 }

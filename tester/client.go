@@ -33,7 +33,7 @@ import (
 // WithAPI runs the given function with a new APIClient instance
 func WithAPI(t *testing.T, deps *Deps, fn func(APIClient)) {
 	// validate deps first
-	deps.Validate(t)
+	deps.Validate(require.New(t))
 
 	// call closure with an api client
 	fn(newClient(t, deps))

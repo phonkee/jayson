@@ -36,9 +36,6 @@ import (
 
 // WithHttpServer runs a new HTTP server with the provided handler and calls the provided function with the server address.
 func WithHttpServer(t *testing.T, handler http.Handler, fn func(t *testing.T, address string)) {
-	if t == nil {
-		panic("testing.T is nil")
-	}
 	if handler == nil {
 		panic("handler is nil")
 	}

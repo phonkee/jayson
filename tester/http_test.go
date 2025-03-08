@@ -25,7 +25,6 @@
 package tester
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
@@ -34,19 +33,18 @@ import (
 func TestWithHttpServer(t *testing.T) {
 	t.Run("test invalid args", func(t *testing.T) {
 		for _, item := range []struct {
-			tt      *testing.T
 			handler http.Handler
 			fn      func(t *testing.T, address string)
 		}{
-			{nil, nil, func(t *testing.T, address string) {}},
-			{t, nil, func(t *testing.T, address string) {}},
-			{t, http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), nil},
+			{nil, func(t *testing.T, address string) {}},
+			{nil, func(t *testing.T, address string) {}},
+			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), nil},
 		} {
 			assert.Panics(
 				t,
 				func() {
 					WithHttpServer(
-						item.tt,
+						t,
 						item.handler,
 						item.fn,
 					)
@@ -64,7 +62,7 @@ func TestWithHttpServer(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			}),
 			func(t *testing.T, address string) {
-				resp, err := http.DefaultClient.Get(fmt.Sprintf("http://%v", address))
+				resp, err := http.DefaultClient.Get("http://" + address)
 				assert.NoError(t, err)
 				assert.Equal(t, http.StatusOK, resp.StatusCode)
 				assert.Equal(t, 1, value)

@@ -29,8 +29,12 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/phonkee/jayson/tester"
+	"github.com/phonkee/jayson/tester/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
@@ -52,13 +56,25 @@ func exampleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// MatchByStringContains matches string by substring
+func matchByStringContains(s string) func(in string) bool {
+	return func(in string) bool {
+		return strings.Contains(in, s)
+	}
+}
+
 func newHealthRouter(t *testing.T) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc("/api/v1/health", exampleHandler).Methods(http.MethodGet).Name("api:v1:health")
 	return router
 }
 
-func TestAPI(t *testing.T) {
+// ptrTo helper
+func ptrTo[T any](v T) *T {
+	return &v
+}
+
+func TestClient(t *testing.T) {
 	t.Run("test handler", func(t *testing.T) {
 		router := newHealthRouter(t)
 		tester.WithAPI(t, &tester.Deps{
@@ -174,7 +190,82 @@ func TestAPI(t *testing.T) {
 
 }
 
-// ptrTo helper
-func ptrTo[T any](v T) *T {
-	return &v
+func TestClient_MethodAliases(t *testing.T) {
+	testMethod := func(t *testing.T, method string, fn func(client tester.APIClient) func(t require.TestingT, path string) tester.APIRequest) {
+		name := "test " + method
+		t.Run(name, func(t *testing.T) {
+			rt := mocks.NewRoundTripper(t)
+			resp := &http.Response{
+				StatusCode: http.StatusOK,
+			}
+			// expect round trip
+			rt.On("RoundTrip", mock.MatchedBy(func(r *http.Request) bool {
+				return r.Method == method
+			})).Return(resp, nil)
+			hc := &http.Client{
+				Transport: rt,
+			}
+
+			tester.WithAPI(t, &tester.Deps{
+				Address: "http://localhost",
+				Client:  hc,
+			}, func(api tester.APIClient) {
+				// context first
+				ctx := context.Background()
+
+				fn(api)(t, "/api/v1/health").Do(t, ctx)
+			})
+
+		})
+	}
+
+	testMethod(t, http.MethodDelete, func(client tester.APIClient) func(t require.TestingT, path string) tester.APIRequest {
+		return client.Delete
+	})
+
+	testMethod(t, http.MethodGet, func(client tester.APIClient) func(t require.TestingT, path string) tester.APIRequest {
+		return client.Get
+	})
+
+	testMethod(t, http.MethodPost, func(client tester.APIClient) func(t require.TestingT, path string) tester.APIRequest {
+		return client.Post
+	})
+
+	testMethod(t, http.MethodPut, func(client tester.APIClient) func(t require.TestingT, path string) tester.APIRequest {
+		return client.Put
+	})
+
+}
+
+func TestClient_ReverseURL(t *testing.T) {
+	t.Run("test missing router", func(t *testing.T) {
+		tester.WithAPI(t, &tester.Deps{
+			Handler: http.HandlerFunc(exampleHandler),
+		}, func(api tester.APIClient) {
+			m := mocks.NewTestingT(t)
+			m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains("Deps: Router is nil")))
+			m.On("FailNow").Run(func(args mock.Arguments) {
+				t.Skip()
+			})
+			api.ReverseURL(m, "api:v1:health")
+		})
+
+	})
+
+	t.Run("test missing route", func(t *testing.T) {
+		router := mux.NewRouter()
+		tester.WithAPI(t, &tester.Deps{
+			Router:  router,
+			Handler: http.HandlerFunc(exampleHandler),
+		}, func(api tester.APIClient) {
+			m := mocks.NewTestingT(t)
+			m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains("route `api:v1:health` not found")))
+			m.On("FailNow").Run(func(args mock.Arguments) {
+				t.Skip()
+			})
+			api.ReverseURL(m, "api:v1:health")
+		})
+
+	})
+
 }

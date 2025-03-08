@@ -125,7 +125,12 @@ func (r *request) Do(t require.TestingT, ctx context.Context) APIResponse {
 // doAddress does the request to the address
 func (r *request) doAddress(t require.TestingT, rw http.ResponseWriter, req *http.Request) {
 	// prepare client without any timeout since we add context to the request
-	hc := &http.Client{}
+	var hc *http.Client
+	if r.deps.Client != nil {
+		hc = r.deps.Client
+	} else {
+		hc = &http.Client{}
+	}
 
 	// update host and scheme
 	req.URL.Host = r.deps.Address

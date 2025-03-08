@@ -27,6 +27,7 @@ package tester
 import (
 	"context"
 	"github.com/stretchr/testify/require"
+	"net/http"
 )
 
 // APIClient is the interface for testing the rest APIClient
@@ -86,3 +87,8 @@ const (
 	// ContentTypeJSON is the content type for json
 	ContentTypeJSON = "application/json"
 )
+
+//go:generate mockery --name=RoundTripper --filename=round_tripper.go
+type RoundTripper interface {
+	http.RoundTripper
+}

@@ -41,6 +41,8 @@ type Deps struct {
 	Handler http.Handler
 	// Addr is the address of the server
 	Address string
+	// Client sets custom http client
+	Client *http.Client
 }
 
 // Validate deps

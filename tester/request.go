@@ -38,6 +38,7 @@ import (
 	"testing"
 )
 
+// newRequest creates a new *request instance
 func newRequest(method, path string, deps *Deps) *request {
 	return &request{
 		method: method,
@@ -114,10 +115,10 @@ func (r *request) Do(t *testing.T, ctx context.Context) APIResponse {
 
 // doAddress does the request to the address
 func (r *request) doAddress(t *testing.T, rw http.ResponseWriter, req *http.Request) {
-	// prepare client
+	// prepare client without any timeout since we add context to the request
 	hc := &http.Client{}
 
-	// update address
+	// update host and scheme
 	req.URL.Host = r.deps.Address
 	req.URL.Scheme = "http"
 

@@ -29,6 +29,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -80,10 +81,6 @@ func (r *request) Do(t *testing.T, ctx context.Context) APIResponse {
 	// prepare recorder for response
 	rw := httptest.NewRecorder()
 
-	assert.NotPanicsf(t, func() {
-		r.deps.Handler.ServeHTTP(rw, req)
-	}, "handler panic")
-
 	// add query if present
 	if len(r.query) > 0 {
 		req.URL.RawQuery = r.query.Encode()
@@ -92,6 +89,13 @@ func (r *request) Do(t *testing.T, ctx context.Context) APIResponse {
 	// add header if present
 	if len(r.header) > 0 {
 		req.Header = r.header
+	}
+
+	// do the request to the address or handler
+	if r.deps.Address != "" {
+		r.doAddress(t, rw, req)
+	} else {
+		r.doHandler(t, rw, req)
 	}
 
 	// prepare response
@@ -106,6 +110,40 @@ func (r *request) Do(t *testing.T, ctx context.Context) APIResponse {
 	}
 
 	return result
+}
+
+// doAddress does the request to the address
+func (r *request) doAddress(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+	// prepare client
+	hc := &http.Client{}
+
+	// update address
+	req.URL.Host = r.deps.Address
+	req.URL.Scheme = "http"
+
+	resp, err := hc.Do(req)
+	require.NoErrorf(t, err, "failed to do request: %v", err)
+
+	// write status code and headers
+	rw.WriteHeader(resp.StatusCode)
+	for key, values := range resp.Header {
+		for _, value := range values {
+			rw.Header().Add(key, value)
+		}
+	}
+
+	// write body
+	if resp.Body != nil {
+		_, err := io.Copy(rw, resp.Body)
+		assert.NoErrorf(t, err, "failed to copy body: %v", err)
+	}
+}
+
+// doHandler does the request to the handler
+func (r *request) doHandler(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+	assert.NotPanicsf(t, func() {
+		r.deps.Handler.ServeHTTP(rw, req)
+	}, "handler panicked")
 }
 
 // Header sets the header of the request

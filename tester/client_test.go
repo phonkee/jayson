@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
+	"time"
 )
 
 type HealthResponse struct {
@@ -55,45 +56,119 @@ func newHealthRouter(t *testing.T) *mux.Router {
 }
 
 func TestAPI(t *testing.T) {
-	router := newHealthRouter(t)
-	WithAPI(t, &Deps{
-		Router: router,
-	}, func(api APIClient) {
-		// context first
-		ctx := context.Background()
+	t.Run("test handler", func(t *testing.T) {
+		router := newHealthRouter(t)
+		WithAPI(t, &Deps{
+			Router:  router,
+			Handler: router,
+		}, func(api APIClient) {
+			// context first
+			ctx := context.Background()
 
-		var (
-			host   string
-			status string
-		)
+			var (
+				host   string
+				status string
+			)
 
-		// test pointer in AssertJsonKeyEquals
-		ptrStatus := ptrTo("something")
-		statusValue := "something"
+			// test pointer in AssertJsonKeyEquals
+			ptrStatus := ptrTo("something")
+			statusValue := "something"
 
-		// response struct
-		rr := HealthResponse{}
+			// response struct
+			rr := HealthResponse{}
 
-		// do response
-		api.Request(t, http.MethodGet, api.ReverseURL(t, "api:v1:health")).
-			Do(t, ctx).
-			AssertStatus(t, http.StatusOK).
-			AssertJsonEquals(t, `{"status": "something", "host": "localhost"}`).
-			Unmarshal(t,
-				APIObject(t,
-					"status", &status,
-					"host", &host,
-				),
-			).
-			Unmarshal(t, &rr).
-			AssertJsonKeyEquals(t, "status", "something").
-			AssertJsonKeyEquals(t, "status", statusValue).
-			AssertJsonKeyEquals(t, "status", ptrStatus).
-			AssertJsonKeyEquals(t, "host", "localhost")
+			// do response
+			api.Request(t, http.MethodGet, api.ReverseURL(t, "api:v1:health")).
+				Do(t, ctx).
+				AssertStatus(t, http.StatusOK).
+				AssertJsonEquals(t, `{"status": "something", "host": "localhost"}`).
+				Unmarshal(t,
+					APIObject(t,
+						"status", &status,
+						"host", &host,
+					),
+				).
+				Unmarshal(t, &rr).
+				AssertJsonKeyEquals(t, "status", "something").
+				AssertJsonKeyEquals(t, "status", statusValue).
+				AssertJsonKeyEquals(t, "status", ptrStatus).
+				AssertJsonKeyEquals(t, "host", "localhost")
 
-		assert.Equal(t, "something", status)
-		assert.Equal(t, "localhost", host)
+			assert.Equal(t, "something", status)
+			assert.Equal(t, "localhost", host)
+		})
 	})
+
+	t.Run("test address", func(t *testing.T) {
+		// create router so we have a handler to run server
+		router := newHealthRouter(t)
+
+		t.Run("test error", func(t *testing.T) {
+			WithHttpServer(t, router, func(address string) {
+				WithAPI(t, &Deps{
+					Router:  router,
+					Address: address,
+				}, func(api APIClient) {
+					// context first
+					ctx, cf := context.WithTimeout(context.Background(), time.Second*2)
+					defer cf()
+
+					// do response
+					api.Request(t, http.MethodGet, "/not/exist").
+						Do(t, ctx).
+						AssertStatus(t, http.StatusNotFound)
+				})
+			})
+		})
+
+		t.Run("test success", func(t *testing.T) {
+			WithHttpServer(t, router, func(address string) {
+				WithAPI(t, &Deps{
+					Router:  router,
+					Address: address,
+				}, func(api APIClient) {
+					// context first
+					ctx, cf := context.WithTimeout(context.Background(), time.Second*2)
+					defer cf()
+
+					var (
+						host   string
+						status string
+					)
+
+					// test pointer in AssertJsonKeyEquals
+					ptrStatus := ptrTo("something")
+					statusValue := "something"
+
+					// response struct
+					rr := HealthResponse{}
+
+					// do response
+					api.Request(t, http.MethodGet, api.ReverseURL(t, "api:v1:health")).
+						Do(t, ctx).
+						AssertStatus(t, http.StatusOK).
+						AssertJsonEquals(t, `{"status": "something", "host": "localhost"}`).
+						Unmarshal(t,
+							APIObject(t,
+								"status", &status,
+								"host", &host,
+							),
+						).
+						Unmarshal(t, &rr).
+						AssertJsonKeyEquals(t, "status", "something").
+						AssertJsonKeyEquals(t, "status", statusValue).
+						AssertJsonKeyEquals(t, "status", ptrStatus).
+						AssertJsonKeyEquals(t, "host", "localhost")
+
+					assert.Equal(t, "something", status)
+					assert.Equal(t, "localhost", host)
+				})
+
+			})
+		})
+
+	})
+
 }
 
 // ptrTo helper

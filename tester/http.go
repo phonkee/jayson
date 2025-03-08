@@ -25,29 +25,37 @@
 package tester
 
 import (
-	"github.com/gorilla/mux"
-	"github.com/stretchr/testify/require"
+	"context"
+	"github.com/stretchr/testify/assert"
+	"net"
 	"net/http"
-	"strings"
 	"testing"
 )
 
-// Deps is the dependencies for the APIClient
-// Router is optional, if not provided, ReverseURL will not work
-// One of Handler or Address is required
-type Deps struct {
-	// Router - currently required
-	Router *mux.Router
-	// Handler is the http.Handler
-	Handler http.Handler
-	// Addr is the address of the server
-	Address string
-}
+// WithHttpServer runs a new HTTP server with the provided handler and calls the provided function with the server address.
+func WithHttpServer(t *testing.T, handler http.Handler, fn func(address string)) {
+	// listen to the first available port
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	assert.NoError(t, err)
 
-// Validate deps
-func (d *Deps) Validate(t *testing.T) {
-	// clean address
-	d.Address = strings.TrimSpace(d.Address)
-	// check if Handler or Address is provided
-	require.Falsef(t, d.Handler == nil && d.Address == "", "Handler or Address is required")
+	// close listener on exit
+	defer func() {
+		_ = lis.Close()
+	}()
+
+	// prepare http server
+	srv := &http.Server{
+		Handler: handler,
+	}
+
+	// run server in goroutine
+	go func() {
+		_ = srv.Serve(lis)
+	}()
+
+	// call function with address
+	fn(lis.Addr().String())
+
+	// shutdown server
+	assert.NoError(t, srv.Shutdown(context.Background()))
 }

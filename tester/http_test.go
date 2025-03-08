@@ -25,58 +25,50 @@
 package tester
 
 import (
-	"context"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"net"
 	"net/http"
 	"testing"
 )
 
-// WithHttpServer runs a new HTTP server with the provided handler and calls the provided function with the server address.
-func WithHttpServer(t *testing.T, handler http.Handler, fn func(t *testing.T, address string)) {
-	if t == nil {
-		panic("testing.T is nil")
-	}
-	if handler == nil {
-		panic("handler is nil")
-	}
-	if fn == nil {
-		panic("closure is nil")
-	}
-
-	// listen to the first available port
-	lis, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-
-	// close listener on exit
-	defer func() {
-		_ = lis.Close()
-	}()
-
-	// prepare http server
-	srv := &http.Server{
-		Handler: handler,
-	}
-
-	// run server in goroutine
-	go func() {
-		_ = srv.Serve(lis)
-	}()
-
-	// prepare message
-	message := fmt.Sprintf("test http server on %v", lis.Addr().String())
-
-	// run test
-	t.Run(message, func(t *testing.T) {
-		// this should not panic
-		assert.NotPanicsf(t, func() {
-			// call function with address
-			fn(t, lis.Addr().String())
-		}, "closure should not panic")
+func TestWithHttpServer(t *testing.T) {
+	t.Run("test invalid args", func(t *testing.T) {
+		for _, item := range []struct {
+			tt      *testing.T
+			handler http.Handler
+			fn      func(t *testing.T, address string)
+		}{
+			{nil, nil, func(t *testing.T, address string) {}},
+			{t, nil, func(t *testing.T, address string) {}},
+			{t, http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), nil},
+		} {
+			assert.Panics(
+				t,
+				func() {
+					WithHttpServer(
+						item.tt,
+						item.handler,
+						item.fn,
+					)
+				},
+			)
+		}
 	})
 
-	// shutdown server now
-	assert.NoError(t, srv.Shutdown(context.Background()))
+	t.Run("test valid args", func(t *testing.T) {
+		value := 0
+		WithHttpServer(
+			t,
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				value++
+				w.WriteHeader(http.StatusOK)
+			}),
+			func(t *testing.T, address string) {
+				resp, err := http.DefaultClient.Get(fmt.Sprintf("http://%v", address))
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+				assert.Equal(t, 1, value)
+			},
+		)
+	})
 }

@@ -27,9 +27,19 @@ package tester
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 )
+
+// must panics if error is not nil
+func must[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
 
 // noopHandler does nothing for testing purposes
 type noopHandler struct{}
@@ -46,5 +56,47 @@ func TestRequest_Header(t *testing.T) {
 }
 
 func TestRequest_Query(t *testing.T) {
+
+}
+
+func TestRequest_Body(t *testing.T) {
+	for _, item := range []struct {
+		name     string
+		body     any
+		expected string
+	}{
+		{
+			name:     "test string",
+			body:     `{"value":"value"}`,
+			expected: `{"value":"value"}`,
+		},
+		{
+			name:     "test string",
+			body:     []byte(`{"value":"value"}`),
+			expected: `{"value":"value"}`,
+		},
+		{
+			name:     "test string",
+			body:     strings.NewReader(`{"value":"value"}`),
+			expected: `{"value":"value"}`,
+		},
+
+		{
+			name: "test struct",
+			body: struct {
+				Value string `json:"value"`
+			}{
+				Value: "value",
+			},
+			expected: `{"value":"value"}`,
+		},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}})
+			r.Body(t, item.body)
+
+			assert.JSONEq(t, item.expected, string(must(io.ReadAll(r.body))))
+		})
+	}
 
 }

@@ -26,7 +26,10 @@ package tester
 
 import (
 	"github.com/phonkee/jayson/tester/mocks"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -38,14 +41,141 @@ func matchByStringContains(s string) func(in string) bool {
 	}
 }
 
+type testStruct struct {
+	Value string `json:"value"`
+}
+
 func TestAPIObject(t *testing.T) {
 	t.Run("test odd number of arguments", func(t *testing.T) {
 		m := mocks.NewTestingT(t)
 		m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains("APIObject: odd number of arguments"))).Once()
 		m.On("FailNow")
+
+		// test for odd number of arguments
 		APIObject(m, "key")
+
 		m.AssertExpectations(t)
 		m.AssertNumberOfCalls(t, "Errorf", 1)
 		m.AssertNumberOfCalls(t, "FailNow", 1)
 	})
+
+	t.Run("test settable", func(t *testing.T) {
+
+		t.Run("test non settable", func(t *testing.T) {
+			for _, item := range []struct {
+				name  string
+				value any
+			}{
+				{
+					name:  "test string",
+					value: "world",
+				},
+				{
+					name:  "test int",
+					value: int(1),
+				},
+				{
+					name:  "test bool",
+					value: false,
+				},
+				{
+					name:  "test struct",
+					value: testStruct{},
+				},
+			} {
+				t.Run(item.name, func(t *testing.T) {
+					m := mocks.NewTestingT(t)
+					m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains("APIObject: value `value` is not settable"))).Once()
+					m.On("FailNow")
+					APIObject(m, "value", item.value)
+					m.AssertExpectations(t)
+					m.AssertNumberOfCalls(t, "Errorf", 1)
+					m.AssertNumberOfCalls(t, "FailNow", 1)
+				})
+			}
+		})
+
+		t.Run("test settable", func(t *testing.T) {
+			for _, item := range []struct {
+				name  string
+				value any
+			}{
+				{
+					name:  "test string",
+					value: new(string),
+				},
+				{
+					name:  "test int",
+					value: new(int),
+				},
+				{
+					name:  "test bool",
+					value: new(bool),
+				},
+				{
+					name:  "test struct",
+					value: new(testStruct),
+				},
+			} {
+				t.Run(item.name, func(t *testing.T) {
+					m := mocks.NewTestingT(t)
+					//m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains("APIObject: value `value` is not settable"))).Once()
+					//m.On("FailNow")
+					APIObject(m, "value", item.value)
+					m.AssertExpectations(t)
+					//m.AssertNumberOfCalls(t, "Errorf", 0)
+					//m.AssertNumberOfCalls(t, "FailNow", 0)
+				})
+			}
+		})
+
+		t.Run("test unmarshalling", func(t *testing.T) {
+			for _, item := range []struct {
+				name   string
+				value  any
+				body   []byte
+				expect any
+			}{
+				{
+					name:   "test string",
+					value:  new(string),
+					body:   []byte(`{"value":"hello"}`),
+					expect: ptrTo("hello"),
+				},
+				{
+					name:   "test int",
+					value:  new(int),
+					body:   []byte(`{"value":1}`),
+					expect: ptrTo(1),
+				},
+				{
+					name:   "test bool",
+					value:  new(bool),
+					body:   []byte(`{"value":true}`),
+					expect: ptrTo(true),
+				},
+				{
+					name:   "test struct",
+					value:  new(testStruct),
+					body:   []byte(`{"value": {"value": "hello"}}`),
+					expect: &testStruct{Value: "hello"},
+				},
+			} {
+				t.Run(item.name, func(t *testing.T) {
+					m := mocks.NewTestingT(t)
+					resp := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+					resp.body = item.body
+					resp.Unmarshal(m, APIObject(m, "value", item.value))
+					assert.Equal(t, item.expect, item.value)
+					m.AssertExpectations(t)
+				})
+			}
+		})
+
+	})
+
+}
+
+func ptrTo[T any](v T) *T {
+	return &v
 }

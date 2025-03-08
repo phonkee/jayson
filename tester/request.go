@@ -44,6 +44,7 @@ func newRequest(method, path string, deps *Deps) *request {
 		path:   path,
 		deps:   deps,
 		header: make(http.Header),
+		query:  make(url.Values),
 	}
 }
 

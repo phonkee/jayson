@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"reflect"
+	"runtime"
 )
 
 // APIObject gives ability to unmarshall json object into multiple fields
@@ -38,18 +39,25 @@ func APIObject(t require.TestingT, kv ...any) any {
 		return nil
 	}
 
+	// get caller info
+	_, file, line, _ := runtime.Caller(1)
+
 	m := make(map[string]any)
 
 	// iterate over key-value pairs
 	for i := 0; i < len(kv); i += 2 {
 		k, ok := kv[i].(string)
-		assert.Truef(t, ok, "APIObject: key `%s` is not a string", kv[i])
+		assert.Truef(t, ok, "APIObject: key `%s` is not a string (%v:%v)", kv[i], file, line)
+
+		// check if value is a pointer
 		val := reflect.ValueOf(kv[i+1])
+
+		// if value is a pointer, dereference it
 		if val.Kind() == reflect.Ptr {
 			val = val.Elem()
 		}
 
-		require.Truef(t, val.CanSet(), "APIObject: value `%s` is not settable", k)
+		require.Truef(t, val.CanSet(), "APIObject: value `%s` is not settable (%v, %v)", k, file, line)
 		m[k] = kv[i+1]
 	}
 

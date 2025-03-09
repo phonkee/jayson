@@ -25,6 +25,7 @@
 package tester
 
 import (
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/url"
@@ -43,6 +44,12 @@ type Deps struct {
 	Client *http.Client
 	// Resolver is the URL resolver
 	Resolver Resolver
+}
+
+// ReverseURL resolves URL by name
+func (d *Deps) ReverseURL(t require.TestingT, name string, extra ...ResolverExtra) string {
+	assert.NotNil(t, d.Resolver, "Resolver is required")
+	return d.Resolver.ReverseURL(t, name, extra...)
 }
 
 // Validate deps

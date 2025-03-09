@@ -75,11 +75,7 @@ func (c *client) Request(t require.TestingT, method string, path string) APIRequ
 	return newRequest(method, path, c.deps)
 }
 
-// ReverseURL creates a path by given url name and url arguments
-// name is the name of the route
-// vars are the variables to replace in the route
-// query is the query string to add to the URL
+// ReverseURL creates a path by given url name and resolver extra
 func (c *client) ReverseURL(t require.TestingT, name string, extra ...ResolverExtra) string {
-	require.NotNil(t, c.deps.Resolver, "Deps: Resolver is nil")
-	return c.deps.Resolver.ReverseURL(t, name, extra...)
+	return c.deps.ReverseURL(t, name, extra...)
 }

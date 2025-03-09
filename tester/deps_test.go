@@ -61,7 +61,7 @@ func TestDeps_Validate(t *testing.T) {
 		} {
 			m := mocks.NewTestingT(t)
 			m.On("Errorf", mock.Anything, mock.MatchedBy(func(msg string) bool {
-				return strings.Contains(msg, "exampleHandler or Address is required")
+				return strings.Contains(msg, "Handler or Address is required")
 			})).Once()
 			m.On("FailNow").Once()
 			item.deps.Validate(m)

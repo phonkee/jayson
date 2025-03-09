@@ -30,7 +30,13 @@ import (
 	"net/url"
 )
 
-// ResolverArgs adds arguments to the resolver
+// NewGorillaResolver creates a new gorilla resolver
+func NewGorillaResolver(t require.TestingT, router *mux.Router) Resolver {
+	require.NotNilf(t, router, "resolver: Router is nil")
+	return &gorillaResolver{router: router}
+}
+
+// ResolverArgs adds arguments to the resolver, these are named arguments
 func ResolverArgs(t require.TestingT, args ...string) ResolverExtra {
 	return resolverExtra(func() []string { return args }, nil)
 }
@@ -49,6 +55,7 @@ func ResolverQuery(t require.TestingT, kv ...string) ResolverExtra {
 }
 
 // resolverExtraImpl is an implementation of ResolverExtra
+// it is for internal use only
 type resolverExtraImpl struct {
 	argsFunc  func() []string
 	queryFunc func() url.Values
@@ -56,11 +63,17 @@ type resolverExtraImpl struct {
 
 // Args returns a list of additional arguments that can be used to resolve the URL
 func (r *resolverExtraImpl) Args() []string {
+	if r.argsFunc == nil {
+		return nil
+	}
 	return r.argsFunc()
 }
 
 // Query returns a list of additional query parameters that can be used to resolve the URL
 func (r *resolverExtraImpl) Query() url.Values {
+	if r.queryFunc == nil {
+		return nil
+	}
 	return r.queryFunc()
 }
 
@@ -76,12 +89,6 @@ func resolverExtra(argsFunc func() []string, queryFunc func() url.Values) Resolv
 		argsFunc:  argsFunc,
 		queryFunc: queryFunc,
 	}
-}
-
-// NewGorillaResolver creates a new gorilla resolver
-func NewGorillaResolver(t require.TestingT, router *mux.Router) Resolver {
-	require.NotNilf(t, router, "resolver: Router is nil")
-	return &gorillaResolver{router: router}
 }
 
 // gorillaResolver is a resolver that uses gorilla mux router to resolve URLs
@@ -107,9 +114,13 @@ func (g *gorillaResolver) ReverseURL(t require.TestingT, name string, extra ...R
 	reversedURL, err := route.URL(args...)
 	require.NoErrorf(t, err, "failed to reverse URL for route `%s`", name)
 
-	// add query
+	// add query parameters to the URL
 	q := reversedURL.Query()
 	for _, e := range extra {
+		qv := e.Query()
+		if qv == nil {
+			continue
+		}
 		for k, v := range e.Query() {
 			for _, vv := range v {
 				q.Add(k, vv)

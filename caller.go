@@ -34,12 +34,21 @@ var (
 	patternJaysonPackage = regexp.MustCompile(`github.com/phonkee/jayson\..+`)
 )
 
+const (
+	defaultUnknownFile = "<unknown>"
+	defaultUnknownFn   = "<unknown>"
+)
+
 // getCallerInfo returns new caller info that is outside jayson package
 // This gives more accurate debug information.
 // This is only called when debug is set and the level is set to debug.
 // This function is called only from RegisterError/RegisterResponse functions.
-func getCallerInfo(maxDepth int) callerInfo {
-	for i := 1; i < maxDepth; i++ {
+func getCallerInfo(maxDepth int, skip ...int) callerInfo {
+	skipped := 1
+	if len(skip) > 0 {
+		skipped += skip[0]
+	}
+	for i := skipped; i < maxDepth; i++ {
 		pc, file, no, ok := runtime.Caller(i)
 		if !ok {
 			break
@@ -54,8 +63,8 @@ func getCallerInfo(maxDepth int) callerInfo {
 		}
 	}
 	return callerInfo{
-		file: "<unknown>",
-		fn:   "<unknown>",
+		file: defaultUnknownFile,
+		fn:   defaultUnknownFn,
 		line: 0,
 	}
 }

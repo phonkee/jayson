@@ -32,16 +32,24 @@ import (
 	"net"
 	"net/http"
 	"testing"
+	"time"
 )
 
 // WithHttpServer runs a new HTTP server with the provided handler and calls the provided function with the server address.
-func WithHttpServer(t *testing.T, handler http.Handler, fn func(t *testing.T, address string)) {
+func WithHttpServer(t *testing.T, ctx context.Context, handler http.Handler, fn func(t *testing.T, ctx context.Context, address string)) {
 	if handler == nil {
 		panic("handler is nil")
 	}
 	if fn == nil {
 		panic("closure is nil")
 	}
+	if ctx == nil {
+		panic("context is nil")
+	}
+
+	// add cancel to context
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	// listen to the first available port
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
@@ -54,7 +62,12 @@ func WithHttpServer(t *testing.T, handler http.Handler, fn func(t *testing.T, ad
 
 	// prepare http server
 	srv := &http.Server{
+		// Handler to serve
 		Handler: handler,
+		// Base context
+		BaseContext: func(net.Listener) context.Context {
+			return ctx
+		},
 	}
 
 	// run server in goroutine
@@ -70,10 +83,17 @@ func WithHttpServer(t *testing.T, handler http.Handler, fn func(t *testing.T, ad
 		// this should not panic
 		assert.NotPanicsf(t, func() {
 			// call function with address
-			fn(t, lis.Addr().String())
+			fn(t, ctx, lis.Addr().String())
 		}, "closure should not panic")
 	})
 
-	// shutdown server now
-	assert.NoError(t, srv.Shutdown(context.Background()))
+	// fast shutdown (1 second)
+	ctx, cancelTimeout := context.WithTimeout(context.Background(), time.Second)
+	defer cancelTimeout()
+
+	// shutdown server with timeout
+	if err := srv.Shutdown(ctx); err != nil {
+		// shutdown server immediately
+		_ = srv.Close()
+	}
 }

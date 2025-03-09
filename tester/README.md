@@ -9,7 +9,16 @@ You need to call `WithAPI` function with dependencies and then you provide closu
 This library supports http.Handler testing as well as http server testing (Address).
 
 ```go
+package example_test
+
+import (
+	"encoding/json"
+	"github.com/phonkee/jayson/tester"
+	"github.com/phonkee/jayson/tester/resolver"
+)
+
 var (
+    // we will use gorilla mux router
     router = mux.NewRouter()
 )
 
@@ -25,6 +34,7 @@ func init() {
     }).Methods(http.MethodGet).Name("api:v1:health")
 }
 
+// HealthResponse is a simple response struct that returns status
 type HealthResponse struct {
     Status string `json:"status"`
 }
@@ -38,23 +48,23 @@ func TestHealthHandler(t *testing.T) {
         
         // unmarshal key from json object to value
         api.Get(t, api.ReverseURL(t, "api:v1:health")).
-            Do(context.Background()).
+            Do(t, context.TODO()).
             AssertStatus(t, http.StatusOK).
             Unmarshal(t, 
-                APIObject(t, "status", &status), // APIObject is helper function to unmarshal key from json object
+                APIObject(t, "status", &status), // APIObject deconstructs json object to value given key value pairs
             )
         assert.Equal(t, "ok", status)
 
         // direct unmarshal to struct
         response := HealthResponse{}
         api.Get(t, api.ReverseURL(t, "api:v1:health")).
-            Do(context.Background()).
+            Do(t, context.TODO()).
             AssertStatus(t, http.StatusOK).
             Unmarshal(t, &response)
 
         // assert json equals
         api.Get(t, api.ReverseURL(t, "api:v1:health")).
-            Do(context.Background()).
+            Do(t, context.TODO()).
             AssertStatus(t, http.StatusOK).
             AssertJsonEquals(t, HealthResponse{
                 Status: "ok",	
@@ -62,10 +72,9 @@ func TestHealthHandler(t *testing.T) {
 		
         // assert object key
         api.Get(t, api.ReverseURL(t, "api:v1:health")).
-            Do(context.Background()).
+            Do(t, context.TODO()).
             AssertStatus(t, http.StatusOK).
             AssertJsonKeyEquals(t, "status", "ok")
-		
     })
 }
 ```
@@ -82,7 +91,7 @@ Asserts that response status code is equal to provided status code.
 
 ```go
 api.Get(t, "/api/v1/health").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertStatus(t, http.StatusOK)
 ```
 
@@ -92,7 +101,7 @@ Asserts that response header value is equal to provided value.
 
 ```go
 api.Get(t, "/api/v1/health").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertHeaderValue(t, "Content-Type", "application/json")
 ```
 
@@ -106,7 +115,7 @@ type HealthResponse struct {
 }
 
 api.Get(t, "/api/v1/health").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertJsonEquals(t, HealthResponse{
         Status: "ok",
     })
@@ -119,7 +128,7 @@ Unmarshal is not assertion but it is used to unmarshal response body to provided
 ```go
 var response HealthResponse
 api.Get(t, "/api/v1/health").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertStatus(t, http.StatusOK).
     Unmarshal(t, &response)
 ```
@@ -156,22 +165,22 @@ Now let's see some examples how we can assert data by json path.
 ```go
 // assert that status is ok
 api.Get(t, "/api/v1/users").
-    Do(context.Background()).
-	AssertJsonPath(t, "status", "ok").
+    Do(t, context.TODO()).
+    AssertJsonPath(t, "status", "ok").
 
 // assert that users array has length of 2
 api.Get(t, "/api/v1/users").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertJsonPath(t, "data.users.__len__", 2).
 
 // assert that first user has id 1
 api.Get(t, "/api/v1/users").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertJsonPath(t, "data.users.0.id", 1).
 
 // assert that data has key users
 api.Get(t, "/api/v1/users").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertJsonPath(t, "data.users.__keys__", []string{"users"}).
 
 // prepare simple struct for partial unmarshalling
@@ -180,29 +189,29 @@ type SimpleUser struct {
 }
 // assert that users data equals to provided slice
 api.Get(t, "/api/v1/users").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertJsonPath(t, "data.users", []SimpleUser{
         {ID: 1}, {ID: 2}
     })
 
 // assert key users exists
 api.Get(t, "/api/v1/users").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertJsonPath(t, "data.users.__exists__", nil)
 
 // assert that first user id is greater than 0
 api.Get(t, "/api/v1/users").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertJsonPath(t, "data.users.0.id.__gte__", 1)
 
 // assert that name of first user is Peter
 api.Get(t, "/api/v1/users").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertJsonPath(t, "data.users.0.name", "Peter")
 
 // assert that name of first user is not John
 api.Get(t, "/api/v1/users").
-    Do(context.Background()).
+    Do(t, context.TODO()).
     AssertJsonPath(t, "data.users.0.name.__neq__", "John")
 ```
 

@@ -34,12 +34,12 @@ import (
 )
 
 // Deps is the dependencies for the APIClient
-// Router is optional, if not provided, ReverseURL will not work
+// Resolve provides ReverseURL method, but is only optional
 // One of Handler or Address is required
 type Deps struct {
 	// Handler is the http.Handler
 	Handler http.Handler
-	// Addr is the address of the server
+	// Addr is the address of the server (host:port)
 	Address string
 	// Client sets custom http client
 	Client *http.Client

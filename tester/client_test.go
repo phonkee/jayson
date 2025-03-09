@@ -35,7 +35,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 )
@@ -47,7 +46,7 @@ type exampleResponse struct {
 }
 
 // exampleHandler is a handler for testing
-func exampleHandler(w http.ResponseWriter, r *http.Request) {
+func exampleHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(exampleResponse{
 		Status: "something",
@@ -57,23 +56,12 @@ func exampleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// MatchByStringContains matches string by substring
-func matchByStringContains(s string) func(in string) bool {
-	return func(in string) bool {
-		return strings.Contains(in, s)
-	}
-}
-
 func newHealthRouter(t require.TestingT) *mux.Router {
 	router := mux.NewRouter()
+	assert.NotNil(t, router)
 	router.HandleFunc("/api/v1/health", exampleHandler).Methods(http.MethodGet).Name("api:v1:health")
 	router.HandleFunc("/api/v1/health/{component}", exampleHandler).Methods(http.MethodGet).Name("api:v1:health:extra")
 	return router
-}
-
-// ptrTo helper
-func ptrTo[T any](v T) *T {
-	return &v
 }
 
 func TestClient(t *testing.T) {
@@ -138,7 +126,7 @@ func TestClient(t *testing.T) {
 			// create router so we have a handler to run server
 			router := newHealthRouter(t)
 
-			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
+			tester.WithHttpServer(t, context.Background(), router, func(t *testing.T, ctx context.Context, address string) {
 				tester.WithAPI(t, &tester.Deps{
 					Resolver: resolver.NewGorillaResolver(t, router),
 					Address:  address,
@@ -157,7 +145,7 @@ func TestClient(t *testing.T) {
 
 		t.Run("test success", func(t *testing.T) {
 			router := newHealthRouter(t)
-			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
+			tester.WithHttpServer(t, context.Background(), router, func(t *testing.T, ctx context.Context, address string) {
 				tester.WithAPI(t, &tester.Deps{
 					Resolver: resolver.NewGorillaResolver(t, router),
 					Address:  address,

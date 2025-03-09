@@ -38,7 +38,6 @@ func TestWithHttpServer(t *testing.T) {
 			fn      func(t *testing.T, address string)
 		}{
 			{nil, func(t *testing.T, address string) {}},
-			{nil, func(t *testing.T, address string) {}},
 			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), nil},
 		} {
 			assert.Panics(

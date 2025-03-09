@@ -36,17 +36,19 @@ func TestWithHttpServer(t *testing.T) {
 	t.Run("test invalid args", func(t *testing.T) {
 		for _, item := range []struct {
 			handler http.Handler
+			ctx     context.Context
 			fn      func(t *testing.T, address string)
 		}{
-			{nil, func(t *testing.T, address string) {}},
-			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), nil},
+			{nil, context.Background(), func(t *testing.T, address string) {}},
+			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), context.Background(), nil},
+			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), nil, func(t *testing.T, address string) {}},
 		} {
 			assert.Panics(
 				t,
 				func() {
 					tester.WithHttpServer(
 						t,
-						context.Background(),
+						item.ctx,
 						item.handler,
 						item.fn,
 					)

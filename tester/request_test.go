@@ -49,12 +49,12 @@ type noopHandler struct{}
 func (n noopHandler) ServeHTTP(writer http.ResponseWriter, r *http.Request) {}
 
 func TestRequest_Header(t *testing.T) {
-	r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}})
-	r.Header(t, "key", "value")
+	r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}}).
+		Header(t, "key", "value")
 	r.Do(t, context.Background())
-	assert.Equal(t, []string{ContentTypeJSON}, r.header.Values(ContentTypeHeader))
-	assert.Equal(t, ContentTypeJSON, r.header.Get(ContentTypeHeader))
-	assert.Equal(t, "value", r.header.Get("key"))
+	assert.Equal(t, []string{ContentTypeJSON}, r.(*request).header.Values(ContentTypeHeader))
+	assert.Equal(t, ContentTypeJSON, r.(*request).header.Get(ContentTypeHeader))
+	assert.Equal(t, "value", r.(*request).header.Get("key"))
 }
 
 func TestRequest_Query(t *testing.T) {

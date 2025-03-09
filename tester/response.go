@@ -84,36 +84,7 @@ func (r *response) AssertJsonEquals(t require.TestingT, expected any) APIRespons
 	return r
 }
 
-// AssertJsonKeyEquals asserts that response body key is equal to given value
-// This method uses bit of magic to unmarshal json object into given value.
-// It inspects the type of the given value and unmarshalls the json object into same type.
-func (r *response) AssertJsonKeyEquals(t require.TestingT, key string, what any) APIResponse {
-	require.NotNilf(t, r.body, "response body is nil")
-
-	var val reflect.Value
-	typ := reflect.TypeOf(what)
-	if typ.Kind() == reflect.Ptr {
-		val = reflect.New(typ.Elem())
-	} else {
-		val = reflect.New(typ).Elem()
-	}
-
-	// prepare object
-	obj := make(map[string]json.RawMessage)
-
-	assert.NoError(t, json.NewDecoder(bytes.NewReader(r.body)).Decode(&obj))
-
-	v, ok := obj[key]
-	require.Truef(t, ok, "key %s not found in response", key)
-
-	target := val.Interface()
-	assert.NoError(t, json.NewDecoder(bytes.NewBuffer(v)).Decode(&target))
-
-	assert.Equalf(t, what, target, "expectedError: %v, got: %v", what, target)
-
-	return r
-}
-
+// operation is the type of operation for json path
 type operation int
 
 const (
@@ -124,8 +95,8 @@ const (
 	operationLte
 )
 
-// AssertJsonPathEquals asserts that response body json path is equal to given value
-func (r *response) AssertJsonPathEquals(t require.TestingT, path string, what any) APIResponse {
+// AssertJsonPath asserts that response body json path is equal to given value
+func (r *response) AssertJsonPath(t require.TestingT, path string, what any) APIResponse {
 	// set operation to equals
 	op := operationEquals
 	_ = op
@@ -259,6 +230,7 @@ main:
 }
 
 var (
+	// jsonRawMessageType is the type of json.RawMessage
 	jsonRawMessageType = reflect.TypeOf(json.RawMessage(nil))
 )
 

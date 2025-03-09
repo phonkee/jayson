@@ -149,73 +149,7 @@ func TestResponse_AssertJsonEquals(t *testing.T) {
 	}
 }
 
-func TestResponse_AssertJsonKeyEquals(t *testing.T) {
-	t.Run("test simple json key", func(t *testing.T) {
-		for _, item := range []struct {
-			name     string
-			body     string
-			key      string
-			expected string
-		}{
-			{
-				name:     "equal strings",
-				body:     `{"name": "John"}`,
-				key:      "name",
-				expected: "John",
-			},
-			{
-				name:     "equal strings",
-				body:     `{"hello": "world", "name": "John"}`,
-				key:      "hello",
-				expected: "world",
-			},
-		} {
-			t.Run(item.name, func(t *testing.T) {
-				rw := httptest.NewRecorder()
-				req := httptest.NewRequest(http.MethodGet, "/", nil)
-				r := newResponse(rw, req)
-				r.body = []byte(item.body)
-				r.AssertJsonKeyEquals(t, item.key, item.expected)
-			})
-		}
-	})
-
-	t.Run("test struct", func(t *testing.T) {
-		type User struct {
-			Name string `json:"name"`
-		}
-
-		for _, item := range []struct {
-			name     string
-			body     string
-			key      string
-			expected User
-		}{
-			{
-				name:     "equal strings",
-				body:     `{"other": {"name": "John"}}`,
-				key:      "other",
-				expected: User{Name: "John"},
-			},
-			{
-				name:     "equal strings",
-				body:     `{"hello": "world", "name": {"name": "John"}}`,
-				key:      "name",
-				expected: User{Name: "John"},
-			},
-		} {
-			t.Run(item.name, func(t *testing.T) {
-				rw := httptest.NewRecorder()
-				req := httptest.NewRequest(http.MethodGet, "/", nil)
-				r := newResponse(rw, req)
-				r.body = []byte(item.body)
-				r.AssertJsonKeyEquals(t, item.key, &item.expected)
-			})
-		}
-	})
-}
-
-func TestResponse_AssertJsonPathEquals(t *testing.T) {
+func TestResponse_AssertJsonPath(t *testing.T) {
 
 	t.Run("test valid path", func(t *testing.T) {
 		for _, item := range []struct {
@@ -283,7 +217,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 				r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 				r.body = []byte(item.body)
 
-				r.AssertJsonPathEquals(t, item.path, item.expected)
+				r.AssertJsonPath(t, item.path, item.expected)
 			})
 		}
 	})
@@ -313,7 +247,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 					r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 					r.body = []byte(item.body)
 
-					r.AssertJsonPathEquals(t, item.path, item.expect)
+					r.AssertJsonPath(t, item.path, item.expect)
 				})
 			}
 		})
@@ -341,7 +275,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 					r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 					r.body = []byte(item.body)
 
-					r.AssertJsonPathEquals(t, item.path, item.expect)
+					r.AssertJsonPath(t, item.path, item.expect)
 				})
 			}
 
@@ -367,7 +301,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 					r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 					r.body = []byte(item.body)
 
-					r.AssertJsonPathEquals(t, item.path, nil)
+					r.AssertJsonPath(t, item.path, nil)
 				})
 			}
 
@@ -397,7 +331,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 						r.body = []byte(item.body)
 
-						r.AssertJsonPathEquals(t, item.path, item.expect)
+						r.AssertJsonPath(t, item.path, item.expect)
 					})
 				}
 			})
@@ -430,7 +364,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 						m := mocks.NewTestingT(t)
 						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
 
-						r.AssertJsonPathEquals(m, item.path, item.expect)
+						r.AssertJsonPath(m, item.path, item.expect)
 					})
 				}
 			})
@@ -466,7 +400,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 						r.body = []byte(item.body)
 
-						r.AssertJsonPathEquals(t, item.path, item.expect)
+						r.AssertJsonPath(t, item.path, item.expect)
 					})
 				}
 			})
@@ -499,7 +433,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 						m := mocks.NewTestingT(t)
 						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
 
-						r.AssertJsonPathEquals(m, item.path, item.expect)
+						r.AssertJsonPath(m, item.path, item.expect)
 					})
 				}
 			})
@@ -537,7 +471,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 						r.body = []byte(item.body)
 
-						r.AssertJsonPathEquals(t, item.path, item.expect)
+						r.AssertJsonPath(t, item.path, item.expect)
 					})
 				}
 			})
@@ -570,7 +504,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 						m := mocks.NewTestingT(t)
 						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
 
-						r.AssertJsonPathEquals(m, item.path, item.expect)
+						r.AssertJsonPath(m, item.path, item.expect)
 					})
 				}
 			})
@@ -608,7 +542,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 						r.body = []byte(item.body)
 
-						r.AssertJsonPathEquals(t, item.path, item.expect)
+						r.AssertJsonPath(t, item.path, item.expect)
 					})
 				}
 			})
@@ -641,7 +575,7 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 						m := mocks.NewTestingT(t)
 						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
 
-						r.AssertJsonPathEquals(m, item.path, item.expect)
+						r.AssertJsonPath(m, item.path, item.expect)
 					})
 				}
 			})
@@ -696,11 +630,10 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 					t.Skip()
 				})
 
-				r.AssertJsonPathEquals(m, item.path, item.into)
+				r.AssertJsonPath(m, item.path, item.into)
 			})
 		}
 	})
-
 }
 
 func TestResponse_AssertStatus(t *testing.T) {

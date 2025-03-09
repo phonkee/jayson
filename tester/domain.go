@@ -71,12 +71,9 @@ type APIResponse interface {
 	// AssertJsonEquals asserts that response body is equal to given json
 	AssertJsonEquals(t require.TestingT, what any) APIResponse
 
-	// AssertJsonKeyEquals asserts that response body key is equal to given value
-	AssertJsonKeyEquals(t require.TestingT, key string, what any) APIResponse
-
-	// AssertJsonPathEquals asserts that given json path is equal to given value
+	// AssertJsonPath asserts that given json path conforms to given value (special operations are supported)
 	// This method will unmarshal the body into the same type as the value
-	AssertJsonPathEquals(t require.TestingT, path string, what any) APIResponse
+	AssertJsonPath(t require.TestingT, path string, what any) APIResponse
 
 	// AssertStatus asserts that response status is equal to given status
 	AssertStatus(t require.TestingT, status int) APIResponse

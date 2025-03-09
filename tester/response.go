@@ -32,6 +32,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -130,8 +131,8 @@ main:
 		if part == "" {
 			continue
 		}
-		// special case for __len__ which is used to get the length of the array or object
-		if part == "__len__" {
+		switch part {
+		case "__len__":
 			var array []json.RawMessage
 
 			// try to unmarshal into array first
@@ -146,6 +147,26 @@ main:
 				}
 			}
 			break main
+		case "__keys__":
+			var obj map[string]json.RawMessage
+			require.NoErrorf(t, json.NewDecoder(bytes.NewReader(raw)).Decode(&obj), "failed to unmarshal `%v` into `%T`", path, what)
+
+			keys := make([]string, 0, len(obj))
+			for k := range obj {
+				keys = append(keys, k)
+			}
+
+			original, ok := what.([]string)
+			require.Truef(t, ok, "expected `[]string`, got: %T: %v", what)
+
+			// now we need to sort the keys so we can compare them
+			sort.Strings(original)
+			sort.Strings(keys)
+
+			require.Equalf(t, what, keys, "keys are not equal")
+			return r
+		case "__exists__":
+			return r
 		}
 
 		// try to parse the part as a number so we know we need to unmarshal array

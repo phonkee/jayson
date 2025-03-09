@@ -317,6 +317,74 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 				})
 			}
 		})
+		t.Run("test special operation: __keys__", func(t *testing.T) {
+			for _, item := range []struct {
+				name   string
+				body   string
+				path   string
+				expect any
+			}{
+				{
+					name:   "test keys of object",
+					body:   `{"name": "John", "age": 42}`,
+					path:   "__keys__",
+					expect: []string{"name", "age"},
+				},
+				{
+					name:   "test keys of object",
+					body:   `{"obj": {"name": "John", "age": 42}}`,
+					path:   "obj.__keys__",
+					expect: []string{"name", "age"},
+				},
+			} {
+				t.Run(item.name, func(t *testing.T) {
+					r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+					r.body = []byte(item.body)
+
+					r.AssertJsonPathEquals(t, item.path, item.expect)
+				})
+			}
+
+		})
+		t.Run("test special operation: __exists__", func(t *testing.T) {
+			for _, item := range []struct {
+				name string
+				body string
+				path string
+			}{
+				{
+					name: "test keys of object",
+					body: `{"name": "John", "age": 42}`,
+					path: "name.__exists__",
+				},
+				{
+					name: "test keys of object",
+					body: `{"obj": {"name": "John", "age": 42}}`,
+					path: "obj.__exists__",
+				},
+			} {
+				t.Run(item.name, func(t *testing.T) {
+					r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+					r.body = []byte(item.body)
+
+					r.AssertJsonPathEquals(t, item.path, nil)
+				})
+			}
+
+		})
+		t.Run("test special operation: __gt__", func(t *testing.T) {
+
+		})
+		t.Run("test special operation: __lt__", func(t *testing.T) {
+
+		})
+		t.Run("test special operation: __gte__", func(t *testing.T) {
+
+		})
+		t.Run("test special operation: __lte__", func(t *testing.T) {
+
+		})
+
 	})
 
 	t.Run("test invalid path or wrong type", func(t *testing.T) {

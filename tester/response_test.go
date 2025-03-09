@@ -373,14 +373,210 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 
 		})
 		t.Run("test special operation: __gt__", func(t *testing.T) {
+			t.Run("test valid", func(t *testing.T) {
+				for _, item := range []struct {
+					name   string
+					body   string
+					path   string
+					expect any
+				}{
+					{
+						name:   "test integer",
+						body:   `{"object": {"name": 42}}`,
+						path:   "object.name.__gt__",
+						expect: 41,
+					},
+					{
+						name:   "test integer",
+						body:   `{"object": {"name": -40}}`,
+						path:   "object.name.__gt__",
+						expect: -50,
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
 
-		})
-		t.Run("test special operation: __lt__", func(t *testing.T) {
+						r.AssertJsonPathEquals(t, item.path, item.expect)
+					})
+				}
+			})
+			t.Run("test invalid", func(t *testing.T) {
+				for _, item := range []struct {
+					name          string
+					body          string
+					path          string
+					expect        any
+					expectMessage string
+				}{
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": 41}}`,
+						path:          "object.name.__gt__",
+						expect:        42,
+						expectMessage: "value `41` is not greater than `42`",
+					},
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": -60}}`,
+						path:          "object.name.__gt__",
+						expect:        -50,
+						expectMessage: "value `-60` is not greater than `-50`",
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
+						m := mocks.NewTestingT(t)
+						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
 
+						r.AssertJsonPathEquals(m, item.path, item.expect)
+					})
+				}
+			})
 		})
 		t.Run("test special operation: __gte__", func(t *testing.T) {
+			t.Run("test valid", func(t *testing.T) {
+				for _, item := range []struct {
+					name   string
+					body   string
+					path   string
+					expect any
+				}{
+					{
+						name:   "test integer",
+						body:   `{"object": {"name": 42}}`,
+						path:   "object.name.__gte__",
+						expect: 41,
+					},
+					{
+						name:   "test integer",
+						body:   `{"object": {"name": -40}}`,
+						path:   "object.name.__gte__",
+						expect: -50,
+					},
+					{
+						name:   "test integer",
+						body:   `{"object": {"name": -40}}`,
+						path:   "object.name.__gte__",
+						expect: -40,
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
+
+						r.AssertJsonPathEquals(t, item.path, item.expect)
+					})
+				}
+			})
+			t.Run("test invalid", func(t *testing.T) {
+				for _, item := range []struct {
+					name          string
+					body          string
+					path          string
+					expect        any
+					expectMessage string
+				}{
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": 41}}`,
+						path:          "object.name.__gte__",
+						expect:        42,
+						expectMessage: "value `41` is not greater than or equal `42`",
+					},
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": -60}}`,
+						path:          "object.name.__gte__",
+						expect:        -50,
+						expectMessage: "value `-60` is not greater than or equal `-50`",
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
+						m := mocks.NewTestingT(t)
+						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
+
+						r.AssertJsonPathEquals(m, item.path, item.expect)
+					})
+				}
+			})
 
 		})
+
+		t.Run("test special operation: __lt__", func(t *testing.T) {
+			t.Run("test valid", func(t *testing.T) {
+				for _, item := range []struct {
+					name   string
+					body   string
+					path   string
+					expect any
+				}{
+					{
+						name:   "test integer",
+						body:   `{"object": {"name": 42}}`,
+						path:   "object.name.__lt__",
+						expect: 43,
+					},
+					{
+						name:   "test integer",
+						body:   `{"object": {"name": -40}}`,
+						path:   "object.name.__lt__",
+						expect: -30,
+					},
+					{
+						name:   "test integer",
+						body:   `{"object": {"name": 0}}`,
+						path:   "object.name.__lt__",
+						expect: 40,
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
+
+						r.AssertJsonPathEquals(t, item.path, item.expect)
+					})
+				}
+			})
+			t.Run("test invalid", func(t *testing.T) {
+				for _, item := range []struct {
+					name          string
+					body          string
+					path          string
+					expect        any
+					expectMessage string
+				}{
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": 41}}`,
+						path:          "object.name.__lt__",
+						expect:        40,
+						expectMessage: "value `41` is not less than `40`",
+					},
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": -60}}`,
+						path:          "object.name.__lt__",
+						expect:        -70,
+						expectMessage: "value `-60` is not less than `-70`",
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
+						m := mocks.NewTestingT(t)
+						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
+
+						r.AssertJsonPathEquals(m, item.path, item.expect)
+					})
+				}
+			})
+
+		})
+
 		t.Run("test special operation: __lte__", func(t *testing.T) {
 
 		})

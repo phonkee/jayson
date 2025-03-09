@@ -114,8 +114,23 @@ func (r *response) AssertJsonKeyEquals(t require.TestingT, key string, what any)
 	return r
 }
 
+type operation int
+
+const (
+	operationEquals operation = iota
+	operationGt
+	operationGte
+	operationLt
+	operationLte
+)
+
 // AssertJsonPathEquals asserts that response body json path is equal to given value
 func (r *response) AssertJsonPathEquals(t require.TestingT, path string, what any) APIResponse {
+	// set operation to equals
+	op := operationEquals
+	_ = op
+
+	// check if path contains operation
 	path = strings.TrimSpace(path)
 	require.NotZerof(t, path, "path is empty")
 
@@ -167,6 +182,20 @@ main:
 			return r
 		case "__exists__":
 			return r
+		case "__gt__":
+			op = operationGt
+			break main
+		case "__gte__":
+			op = operationGte
+			break main
+		case "__lt__":
+			op = operationLt
+			break main
+		case "__lte__":
+			op = operationLte
+			break main
+		default:
+			// pass
 		}
 
 		// try to parse the part as a number so we know we need to unmarshal array
@@ -213,7 +242,18 @@ main:
 		return r
 	}
 
-	assert.Equalf(t, what, target, "expectedError: %v, got: %v", what, target)
+	switch op {
+	case operationGt:
+		assert.Greaterf(t, target, what, "value `%v` is not greater than `%v`", target, what)
+	case operationGte:
+		assert.GreaterOrEqualf(t, target, what, "value `%v` is not greater than or equal `%v`", target, what)
+	case operationLt:
+		assert.Lessf(t, target, what, "value `%v` is not less than `%v`", target, what)
+	case operationLte:
+		assert.LessOrEqualf(t, target, what, "value `%v` is not less than or equal `%v`", target, what)
+	default:
+		assert.Equalf(t, what, target, "expected: `%v`, got: `%v`", what, target)
+	}
 
 	return r
 }

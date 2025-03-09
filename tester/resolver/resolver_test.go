@@ -22,46 +22,43 @@
  * SOFTWARE.
  */
 
-package tester
+package resolver_test
 
 import (
-	"github.com/phonkee/jayson/tester/resolver"
-	"github.com/stretchr/testify/assert"
+	"encoding/json"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 	"net/http"
-	"net/url"
 	"strings"
 )
 
-// Deps is the dependencies for the APIClient
-// Router is optional, if not provided, ReverseURL will not work
-// One of Handler or Address is required
-type Deps struct {
-	// Handler is the http.Handler
-	Handler http.Handler
-	// Addr is the address of the server
-	Address string
-	// Client sets custom http client
-	Client *http.Client
-	// Resolver is the URL resolver
-	Resolver resolver.Resolver
+// exampleResponse is a response struct for testing
+type exampleResponse struct {
+	Status string `json:"status"`
+	Host   string `json:"host"`
 }
 
-// ReverseURL resolves URL by name
-func (d *Deps) ReverseURL(t require.TestingT, name string, extra ...resolver.Extra) string {
-	assert.NotNil(t, d.Resolver, "Resolver is required")
-	return d.Resolver.ReverseURL(t, name, extra...)
-}
-
-// Validate deps
-func (d *Deps) Validate(t require.TestingT) {
-	// clean address
-	if d.Address = strings.TrimSpace(d.Address); d.Address != "" {
-		// parse url here
-		if parsed, err := url.Parse(d.Address); err == nil && parsed.Host != "" {
-			d.Address = parsed.Host
-		}
+// exampleHandler is a handler for testing
+func exampleHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(exampleResponse{
+		Status: "something",
+		Host:   "localhost",
+	}); err != nil {
+		panic(err)
 	}
-	// check if exampleHandler or Address is provided
-	require.Falsef(t, d.Handler == nil && d.Address == "", "Handler or Address is required")
+}
+
+// MatchByStringContains matches string by substring
+func matchByStringContains(s string) func(in string) bool {
+	return func(in string) bool {
+		return strings.Contains(in, s)
+	}
+}
+
+func newHealthRouter(t require.TestingT) *mux.Router {
+	router := mux.NewRouter()
+	router.HandleFunc("/api/v1/health", exampleHandler).Methods(http.MethodGet).Name("api:v1:health")
+	router.HandleFunc("/api/v1/health/{component}", exampleHandler).Methods(http.MethodGet).Name("api:v1:health:extra")
+	return router
 }

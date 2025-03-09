@@ -22,27 +22,20 @@
  * SOFTWARE.
  */
 
-package tester
+package resolver
 
 import (
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 	"net/url"
 )
 
-// NewGorillaResolver creates a new gorilla resolver
-func NewGorillaResolver(t require.TestingT, router *mux.Router) Resolver {
-	require.NotNilf(t, router, "resolver: Router is nil")
-	return &gorillaResolver{router: router}
-}
-
-// ResolverArgs adds arguments to the resolver, these are named arguments
-func ResolverArgs(t require.TestingT, args ...string) ResolverExtra {
+// Arguments adds arguments to the resolver, these are named arguments
+func Arguments(t require.TestingT, args ...string) Extra {
 	return resolverExtra(func() []string { return args }, nil)
 }
 
-// ResolverQuery adds query parameters to the resolver
-func ResolverQuery(t require.TestingT, kv ...string) ResolverExtra {
+// Query adds query parameters to the resolver
+func Query(t require.TestingT, kv ...string) Extra {
 	return resolverExtra(nil, func() url.Values {
 		urlValues := url.Values{}
 		for i := 0; i < len(kv); i += 2 {
@@ -54,7 +47,7 @@ func ResolverQuery(t require.TestingT, kv ...string) ResolverExtra {
 	})
 }
 
-// resolverExtraImpl is an implementation of ResolverExtra
+// resolverExtraImpl is an implementation of Extra
 // it is for internal use only
 type resolverExtraImpl struct {
 	argsFunc  func() []string
@@ -77,8 +70,8 @@ func (r *resolverExtraImpl) Query() url.Values {
 	return r.queryFunc()
 }
 
-// resolverExtra is an implementation of ResolverExtra
-func resolverExtra(argsFunc func() []string, queryFunc func() url.Values) ResolverExtra {
+// resolverExtra is an implementation of Extra
+func resolverExtra(argsFunc func() []string, queryFunc func() url.Values) Extra {
 	if argsFunc == nil {
 		argsFunc = func() []string { return nil }
 	}
@@ -89,47 +82,4 @@ func resolverExtra(argsFunc func() []string, queryFunc func() url.Values) Resolv
 		argsFunc:  argsFunc,
 		queryFunc: queryFunc,
 	}
-}
-
-// gorillaResolver is a resolver that uses gorilla mux router to resolve URLs
-type gorillaResolver struct {
-	router *mux.Router
-}
-
-// ReverseURL returns a URL by given name and extra arguments
-func (g *gorillaResolver) ReverseURL(t require.TestingT, name string, extra ...ResolverExtra) string {
-	require.NotNil(t, g.router, "resolver: Router is nil")
-
-	// get route from router by name
-	route := g.router.Get(name)
-	require.NotNil(t, route, "route `%s` not found", name)
-
-	// add arguments to the URL
-	args := make([]string, 0)
-	for _, e := range extra {
-		args = append(args, e.Args()...)
-	}
-
-	// reverse the URL
-	reversedURL, err := route.URL(args...)
-	require.NoErrorf(t, err, "failed to reverse URL for route `%s`", name)
-
-	// add query parameters to the URL
-	q := reversedURL.Query()
-	for _, e := range extra {
-		qv := e.Query()
-		if qv == nil {
-			continue
-		}
-		for k, v := range e.Query() {
-			for _, vv := range v {
-				q.Add(k, vv)
-			}
-		}
-	}
-	if len(q) > 0 {
-		reversedURL.RawQuery = q.Encode()
-	}
-
-	return reversedURL.String()
 }

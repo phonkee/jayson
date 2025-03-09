@@ -22,11 +22,11 @@
  * SOFTWARE.
  */
 
-package tester_test
+package resolver_test
 
 import (
-	"github.com/phonkee/jayson/tester"
 	"github.com/phonkee/jayson/tester/mocks"
+	"github.com/phonkee/jayson/tester/resolver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"testing"
@@ -38,14 +38,14 @@ func TestNewGorillaResolver(t *testing.T) {
 		m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains("resolver: Router is nil"))).Once()
 		m.On("FailNow").Once()
 
-		tester.NewGorillaResolver(m, nil)
+		resolver.NewGorillaResolver(m, nil)
 	})
 
 	t.Run("test valid router", func(t *testing.T) {
 		m := mocks.NewTestingT(t)
 		router := newHealthRouter(m)
-		resolver := tester.NewGorillaResolver(m, router)
-		assert.NotNil(t, resolver)
+		rr := resolver.NewGorillaResolver(m, router)
+		assert.NotNil(t, rr)
 	})
 }
 
@@ -54,20 +54,20 @@ func TestGorillaResolver_ReverseURL(t *testing.T) {
 	t.Run("test simple url", func(t *testing.T) {
 		router := newHealthRouter(t)
 		m := mocks.NewTestingT(t)
-		resolver := tester.NewGorillaResolver(m, router)
-		assert.NotNil(t, resolver)
-		url := resolver.ReverseURL(t, "api:v1:health")
+		rr := resolver.NewGorillaResolver(m, router)
+		assert.NotNil(t, rr)
+		url := rr.ReverseURL(t, "api:v1:health")
 		assert.Equal(t, "/api/v1/health", url)
 	})
 
 	t.Run("test url with arguments", func(t *testing.T) {
 		router := newHealthRouter(t)
 		m := mocks.NewTestingT(t)
-		resolver := tester.NewGorillaResolver(m, router)
-		assert.NotNil(t, resolver)
-		url := resolver.ReverseURL(t,
+		rr := resolver.NewGorillaResolver(m, router)
+		assert.NotNil(t, rr)
+		url := rr.ReverseURL(t,
 			"api:v1:health:extra",
-			tester.ResolverArgs(t, "component", "database"),
+			resolver.Arguments(t, "component", "database"),
 		)
 		assert.Equal(t, "/api/v1/health/database", url)
 	})
@@ -75,12 +75,12 @@ func TestGorillaResolver_ReverseURL(t *testing.T) {
 	t.Run("test url with query", func(t *testing.T) {
 		router := newHealthRouter(t)
 		m := mocks.NewTestingT(t)
-		resolver := tester.NewGorillaResolver(m, router)
-		assert.NotNil(t, resolver)
-		url := resolver.ReverseURL(t,
+		rr := resolver.NewGorillaResolver(m, router)
+		assert.NotNil(t, rr)
+		url := rr.ReverseURL(t,
 			"api:v1:health:extra",
-			tester.ResolverArgs(t, "component", "database"),
-			tester.ResolverQuery(t, "page", "1"),
+			resolver.Arguments(t, "component", "database"),
+			resolver.Query(t, "page", "1"),
 		)
 		assert.Equal(t, "/api/v1/health/database?page=1", url)
 	})

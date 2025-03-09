@@ -30,6 +30,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/phonkee/jayson/tester"
 	"github.com/phonkee/jayson/tester/mocks"
+	"github.com/phonkee/jayson/tester/resolver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -79,7 +80,7 @@ func TestClient(t *testing.T) {
 	t.Run("test handler", func(t *testing.T) {
 		router := newHealthRouter(t)
 		tester.WithAPI(t, &tester.Deps{
-			Resolver: tester.NewGorillaResolver(t, router),
+			Resolver: resolver.NewGorillaResolver(t, router),
 			Handler:  router,
 		}, func(api tester.APIClient) {
 			// context first
@@ -118,7 +119,7 @@ func TestClient(t *testing.T) {
 		t.Run("test error", func(t *testing.T) {
 			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
 				tester.WithAPI(t, &tester.Deps{
-					Resolver: tester.NewGorillaResolver(t, router),
+					Resolver: resolver.NewGorillaResolver(t, router),
 					Address:  address,
 				}, func(api tester.APIClient) {
 					// context first
@@ -136,7 +137,7 @@ func TestClient(t *testing.T) {
 		t.Run("test success", func(t *testing.T) {
 			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
 				tester.WithAPI(t, &tester.Deps{
-					Resolver: tester.NewGorillaResolver(t, router),
+					Resolver: resolver.NewGorillaResolver(t, router),
 					Address:  address,
 				}, func(api tester.APIClient) {
 					// context first

@@ -26,9 +26,9 @@ package tester
 
 import (
 	"context"
+	"github.com/phonkee/jayson/tester/resolver"
 	"github.com/stretchr/testify/require"
 	"net/http"
-	"net/url"
 )
 
 // APIClient is the interface for testing the rest APIClient
@@ -49,7 +49,7 @@ type APIClient interface {
 	Request(t require.TestingT, method string, path string) APIRequest
 
 	// ReverseURL creates a path by given url name and url arguments
-	ReverseURL(t require.TestingT, name string, extra ...ResolverExtra) string
+	ReverseURL(t require.TestingT, name string, extra ...resolver.Extra) string
 }
 
 // APIRequest is the interface for testing the rest APIClient response
@@ -93,19 +93,4 @@ const (
 //go:generate mockery --name=RoundTripper --filename=round_tripper.go
 type RoundTripper interface {
 	http.RoundTripper
-}
-
-// Resolver is an interface that can be used to resolve URLs
-// from the given name and extra arguments
-type Resolver interface {
-	// ReverseURL returns a URL by given name and extra arguments
-	ReverseURL(t require.TestingT, name string, extra ...ResolverExtra) string
-}
-
-// ResolverExtra is an interface that can be used to pass additional information to the url resolver
-type ResolverExtra interface {
-	// Args returns a list of additional arguments that can be used to resolve the URL
-	Args() []string
-	// Query returns a list of additional query parameters that can be used to resolve the URL
-	Query() url.Values
 }

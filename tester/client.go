@@ -25,6 +25,7 @@
 package tester
 
 import (
+	"github.com/phonkee/jayson/tester/resolver"
 	"github.com/stretchr/testify/require"
 	"net/http"
 )
@@ -76,6 +77,6 @@ func (c *client) Request(t require.TestingT, method string, path string) APIRequ
 }
 
 // ReverseURL creates a path by given url name and resolver extra
-func (c *client) ReverseURL(t require.TestingT, name string, extra ...ResolverExtra) string {
+func (c *client) ReverseURL(t require.TestingT, name string, extra ...resolver.Extra) string {
 	return c.deps.ReverseURL(t, name, extra...)
 }

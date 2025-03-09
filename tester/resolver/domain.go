@@ -22,46 +22,24 @@
  * SOFTWARE.
  */
 
-package tester
+package resolver
 
 import (
-	"github.com/phonkee/jayson/tester/resolver"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net/http"
 	"net/url"
-	"strings"
 )
 
-// Deps is the dependencies for the APIClient
-// Router is optional, if not provided, ReverseURL will not work
-// One of Handler or Address is required
-type Deps struct {
-	// Handler is the http.Handler
-	Handler http.Handler
-	// Addr is the address of the server
-	Address string
-	// Client sets custom http client
-	Client *http.Client
-	// Resolver is the URL resolver
-	Resolver resolver.Resolver
+// Resolver is an interface that can be used to resolve URLs
+// from the given name and extra arguments
+type Resolver interface {
+	// ReverseURL returns a URL by given name and extra arguments
+	ReverseURL(t require.TestingT, name string, extra ...Extra) string
 }
 
-// ReverseURL resolves URL by name
-func (d *Deps) ReverseURL(t require.TestingT, name string, extra ...resolver.Extra) string {
-	assert.NotNil(t, d.Resolver, "Resolver is required")
-	return d.Resolver.ReverseURL(t, name, extra...)
-}
-
-// Validate deps
-func (d *Deps) Validate(t require.TestingT) {
-	// clean address
-	if d.Address = strings.TrimSpace(d.Address); d.Address != "" {
-		// parse url here
-		if parsed, err := url.Parse(d.Address); err == nil && parsed.Host != "" {
-			d.Address = parsed.Host
-		}
-	}
-	// check if exampleHandler or Address is provided
-	require.Falsef(t, d.Handler == nil && d.Address == "", "Handler or Address is required")
+// Extra is an interface that can be used to pass additional information to the url resolver
+type Extra interface {
+	// Args returns a list of additional arguments that can be used to resolve the URL
+	Args() []string
+	// Query returns a list of additional query parameters that can be used to resolve the URL
+	Query() url.Values
 }

@@ -91,17 +91,17 @@ type operation int
 func (o operation) String() string {
 	switch o {
 	case operationEq:
-		return "__eq__"
+		return operationEqStr
 	case operationGt:
-		return "__gt__"
+		return operationGtStr
 	case operationGte:
-		return "__gte__"
+		return operationGteStr
 	case operationLt:
-		return "__lt__"
+		return operationLtStr
 	case operationLte:
-		return "__lte__"
+		return operationLteStr
 	case operationNeq:
-		return "__neq__"
+		return operationNeqStr
 	}
 	return "unknown"
 }
@@ -113,6 +113,18 @@ const (
 	operationLt
 	operationLte
 	operationNeq
+)
+
+const (
+	operationEqStr   = "__eq__"
+	operationGtStr   = "__gt__"
+	operationGteStr  = "__gte__"
+	operationLtStr   = "__lt__"
+	operationLteStr  = "__lte__"
+	operationNeqStr  = "__neq__"
+	operationKeysStr = "__keys__"
+	operationLenStr  = "__len__"
+	operationExists  = "__exists__"
 )
 
 // AssertJsonPath asserts that response body json path is equal to given value
@@ -137,7 +149,7 @@ main:
 		}
 		// special operations handling
 		switch part {
-		case "__len__":
+		case operationLenStr:
 			var array []json.RawMessage
 
 			// try to unmarshal into array first
@@ -153,7 +165,7 @@ main:
 				}
 			}
 			break main
-		case "__keys__":
+		case operationKeysStr:
 			var obj map[string]json.RawMessage
 			require.NoErrorf(t, json.NewDecoder(bytes.NewReader(raw)).Decode(&obj), "failed to unmarshal `%v` into `%T`", path, what)
 
@@ -171,24 +183,24 @@ main:
 
 			require.Equalf(t, what, keys, "keys are not equal")
 			return r
-		case "__exists__":
+		case operationExists:
 			return r
-		case "__gt__":
+		case operationGtStr:
 			op = operationGt
 			break main
-		case "__gte__":
+		case operationGteStr:
 			op = operationGte
 			break main
-		case "__lt__":
+		case operationLtStr:
 			op = operationLt
 			break main
-		case "__lte__":
+		case operationLteStr:
 			op = operationLte
 			break main
-		case "__eq__":
+		case operationEqStr:
 			op = operationEq
 			break main
-		case "__neq__":
+		case operationNeqStr:
 			op = operationNeq
 			break main
 		default:

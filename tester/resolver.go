@@ -36,8 +36,16 @@ func ResolverArgs(t require.TestingT, args ...string) ResolverExtra {
 }
 
 // ResolverQuery adds query parameters to the resolver
-func ResolverQuery(t require.TestingT, query url.Values) ResolverExtra {
-	return resolverExtra(nil, func() url.Values { return query })
+func ResolverQuery(t require.TestingT, kv ...string) ResolverExtra {
+	return resolverExtra(nil, func() url.Values {
+		urlValues := url.Values{}
+		for i := 0; i < len(kv); i += 2 {
+			if i+1 < len(kv) {
+				urlValues.Add(kv[i], kv[i+1])
+			}
+		}
+		return urlValues
+	})
 }
 
 // resolverExtraImpl is an implementation of ResolverExtra
@@ -99,6 +107,7 @@ func (g *gorillaResolver) ReverseURL(t require.TestingT, name string, extra ...R
 	reversedURL, err := route.URL(args...)
 	require.NoErrorf(t, err, "failed to reverse URL for route `%s`", name)
 
+	// add query
 	q := reversedURL.Query()
 	for _, e := range extra {
 		for k, v := range e.Query() {
@@ -107,7 +116,9 @@ func (g *gorillaResolver) ReverseURL(t require.TestingT, name string, extra ...R
 			}
 		}
 	}
-	reversedURL.RawQuery = q.Encode()
+	if len(q) > 0 {
+		reversedURL.RawQuery = q.Encode()
+	}
 
 	return reversedURL.String()
 }

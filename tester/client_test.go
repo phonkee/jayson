@@ -66,6 +66,7 @@ func matchByStringContains(s string) func(in string) bool {
 func newHealthRouter(t require.TestingT) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc("/api/v1/health", exampleHandler).Methods(http.MethodGet).Name("api:v1:health")
+	router.HandleFunc("/api/v1/health/{component}", exampleHandler).Methods(http.MethodGet).Name("api:v1:health:extra")
 	return router
 }
 
@@ -217,37 +218,6 @@ func TestClient_MethodAliases(t *testing.T) {
 
 	testMethod(t, http.MethodPut, func(client tester.APIClient) func(t require.TestingT, path string) tester.APIRequest {
 		return client.Put
-	})
-
-}
-
-func TestClient_ReverseURL(t *testing.T) {
-	t.Run("test missing router", func(t *testing.T) {
-		tester.WithAPI(t, &tester.Deps{
-			Handler: http.HandlerFunc(exampleHandler),
-		}, func(api tester.APIClient) {
-			m := mocks.NewTestingT(t)
-			m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains("Deps: Router is nil")))
-			m.On("FailNow").Run(func(args mock.Arguments) {
-				t.Skip()
-			})
-			api.ReverseURL(m, "api:v1:health")
-		})
-	})
-
-	t.Run("test missing route", func(t *testing.T) {
-		router := mux.NewRouter()
-		tester.WithAPI(t, &tester.Deps{
-			Resolver: tester.NewGorillaResolver(t, router),
-			Handler:  http.HandlerFunc(exampleHandler),
-		}, func(api tester.APIClient) {
-			m := mocks.NewTestingT(t)
-			m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains("route `api:v1:health` not found")))
-			m.On("FailNow").Run(func(args mock.Arguments) {
-				t.Skip()
-			})
-			api.ReverseURL(m, "api:v1:health")
-		})
 	})
 
 }

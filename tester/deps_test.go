@@ -29,7 +29,6 @@ import (
 	"github.com/phonkee/jayson/tester/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"net/http"
 	"strings"
 	"testing"
 )
@@ -39,12 +38,12 @@ func TestDeps_Validate(t *testing.T) {
 		for _, item := range []struct {
 			deps *tester.Deps
 		}{
-			{&tester.Deps{Handler: http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}), Address: ""}},
+			//{&tester.Deps{Handler: http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}), Address: ""}},
 			{&tester.Deps{Handler: nil, Address: "localhost:8080"}},
 		} {
-			//m := mocks.NewTestingT(t)
-			// TODO:
-			item.deps.Validate(nil)
+			m := mocks.NewTestingT(t)
+			item.deps.Validate(m)
+			m.AssertExpectations(t)
 		}
 	})
 

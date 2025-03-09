@@ -50,10 +50,10 @@ func (d *Deps) Validate(t require.TestingT) {
 	// clean address
 	if d.Address = strings.TrimSpace(d.Address); d.Address != "" {
 		// parse url here
-		if parsed, err := url.Parse(d.Address); err == nil {
+		if parsed, err := url.Parse(d.Address); err == nil && parsed.Host != "" {
 			d.Address = parsed.Host
 		}
 	}
 	// check if exampleHandler or Address is provided
-	require.Falsef(t, d.Handler == nil && d.Address == "", "exampleHandler or Address is required")
+	require.Falsef(t, d.Handler == nil && d.Address == "", "Handler or Address is required")
 }

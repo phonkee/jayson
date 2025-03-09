@@ -60,4 +60,29 @@ func TestGorillaResolver_ReverseURL(t *testing.T) {
 		assert.Equal(t, "/api/v1/health", url)
 	})
 
+	t.Run("test url with arguments", func(t *testing.T) {
+		router := newHealthRouter(t)
+		m := mocks.NewTestingT(t)
+		resolver := tester.NewGorillaResolver(m, router)
+		assert.NotNil(t, resolver)
+		url := resolver.ReverseURL(t,
+			"api:v1:health:extra",
+			tester.ResolverArgs(t, "component", "database"),
+		)
+		assert.Equal(t, "/api/v1/health/database", url)
+	})
+
+	t.Run("test url with query", func(t *testing.T) {
+		router := newHealthRouter(t)
+		m := mocks.NewTestingT(t)
+		resolver := tester.NewGorillaResolver(m, router)
+		assert.NotNil(t, resolver)
+		url := resolver.ReverseURL(t,
+			"api:v1:health:extra",
+			tester.ResolverArgs(t, "component", "database"),
+			tester.ResolverQuery(t, "page", "1"),
+		)
+		assert.Equal(t, "/api/v1/health/database?page=1", url)
+	})
+
 }

@@ -578,6 +578,73 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 		})
 
 		t.Run("test special operation: __lte__", func(t *testing.T) {
+			t.Run("test valid", func(t *testing.T) {
+				for _, item := range []struct {
+					name   string
+					body   string
+					path   string
+					expect any
+				}{
+					{
+						name:   "test integer",
+						body:   `{"object": {"name": 40}}`,
+						path:   "object.name.__lte__",
+						expect: 41,
+					},
+					{
+						name:   "test integer",
+						body:   `{"object": {"name": -40}}`,
+						path:   "object.name.__lte__",
+						expect: -30,
+					},
+					{
+						name:   "test integer",
+						body:   `{"object": {"name": -40}}`,
+						path:   "object.name.__lte__",
+						expect: -40,
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
+
+						r.AssertJsonPathEquals(t, item.path, item.expect)
+					})
+				}
+			})
+			t.Run("test invalid", func(t *testing.T) {
+				for _, item := range []struct {
+					name          string
+					body          string
+					path          string
+					expect        any
+					expectMessage string
+				}{
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": 41}}`,
+						path:          "object.name.__lte__",
+						expect:        40,
+						expectMessage: "value `41` is not less than or equal `40`",
+					},
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": -60}}`,
+						path:          "object.name.__lte__",
+						expect:        -70,
+						expectMessage: "value `-60` is not less than or equal `-70`",
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
+						m := mocks.NewTestingT(t)
+						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
+
+						r.AssertJsonPathEquals(m, item.path, item.expect)
+					})
+				}
+			})
 
 		})
 

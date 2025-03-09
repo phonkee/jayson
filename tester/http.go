@@ -36,7 +36,7 @@ import (
 )
 
 // WithHttpServer runs a new HTTP server with the provided handler and calls the provided function with the server address.
-func WithHttpServer(t *testing.T, ctx context.Context, handler http.Handler, fn func(t *testing.T, address string)) {
+func WithHttpServer(t *testing.T, ctx context.Context, handler http.Handler, fn func(t *testing.T, ctx context.Context, address string)) {
 	if handler == nil {
 		panic("handler is nil")
 	}
@@ -83,7 +83,7 @@ func WithHttpServer(t *testing.T, ctx context.Context, handler http.Handler, fn 
 		// this should not panic
 		assert.NotPanicsf(t, func() {
 			// call function with address
-			fn(t, lis.Addr().String())
+			fn(t, ctx, lis.Addr().String())
 		}, "closure should not panic")
 	})
 

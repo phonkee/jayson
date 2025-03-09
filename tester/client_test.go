@@ -138,7 +138,7 @@ func TestClient(t *testing.T) {
 			// create router so we have a handler to run server
 			router := newHealthRouter(t)
 
-			tester.WithHttpServer(t, context.Background(), router, func(t *testing.T, address string) {
+			tester.WithHttpServer(t, context.Background(), router, func(t *testing.T, ctx context.Context, address string) {
 				tester.WithAPI(t, &tester.Deps{
 					Resolver: resolver.NewGorillaResolver(t, router),
 					Address:  address,
@@ -157,7 +157,7 @@ func TestClient(t *testing.T) {
 
 		t.Run("test success", func(t *testing.T) {
 			router := newHealthRouter(t)
-			tester.WithHttpServer(t, context.Background(), router, func(t *testing.T, address string) {
+			tester.WithHttpServer(t, context.Background(), router, func(t *testing.T, ctx context.Context, address string) {
 				tester.WithAPI(t, &tester.Deps{
 					Resolver: resolver.NewGorillaResolver(t, router),
 					Address:  address,

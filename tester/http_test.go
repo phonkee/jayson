@@ -34,14 +34,15 @@ import (
 
 func TestWithHttpServer(t *testing.T) {
 	t.Run("test invalid args", func(t *testing.T) {
+		validFn := func(t *testing.T, ctx context.Context, address string) {}
 		for _, item := range []struct {
 			handler http.Handler
 			ctx     context.Context
-			fn      func(t *testing.T, address string)
+			fn      func(t *testing.T, ctx context.Context, address string)
 		}{
-			{nil, context.Background(), func(t *testing.T, address string) {}},
+			{nil, context.Background(), validFn},
 			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), context.Background(), nil},
-			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), nil, func(t *testing.T, address string) {}},
+			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), nil, validFn},
 		} {
 			assert.Panics(
 				t,
@@ -66,7 +67,7 @@ func TestWithHttpServer(t *testing.T) {
 				value++
 				w.WriteHeader(http.StatusOK)
 			}),
-			func(t *testing.T, address string) {
+			func(t *testing.T, ctx context.Context, address string) {
 				resp, err := http.DefaultClient.Get("http://" + address)
 				assert.NoError(t, err)
 				assert.Equal(t, http.StatusOK, resp.StatusCode)

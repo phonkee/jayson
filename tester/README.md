@@ -20,7 +20,7 @@ func init() {
     router.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
         w.WriteHeader(http.StatusOK)
         if err := json.NewEncoder(w).Encode(HealthResponse{
-			Status: "ok",
+            Status: "ok",
         }); err != nil {
             panic(err)
         }
@@ -33,7 +33,7 @@ type HealthResponse struct {
 
 func TestHealthHandler(t *testing.T) {// 
     tester.WithAPI(t, &Deps{
-        Router: router,
+        Resolver: resolver.NewGorillaMuxResolver(t, router),
         Handler: router,
     }, func(api *API) {
         var status string
@@ -196,6 +196,11 @@ api.Get(t, "/api/v1/users").
 api.Get(t, "/api/v1/users").
     Do(context.Background()).
     AssertJsonPath(t, "data.users.0.id.__gte__", 0)
+
+// assert that name of first user is Peter
+api.Get(t, "/api/v1/users").
+    Do(context.Background()).
+    AssertJsonPath(t, "data.users.0.name", "Peter")
 ```
 
 # Author

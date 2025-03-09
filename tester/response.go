@@ -93,6 +93,7 @@ const (
 	operationGte
 	operationLt
 	operationLte
+	operationNeq
 )
 
 // AssertJsonPath asserts that response body json path is equal to given value
@@ -169,6 +170,9 @@ main:
 		case "__eq__":
 			op = operationEquals
 			break main
+		case "__neq__":
+			op = operationNeq
+			break main
 		default:
 			// mama says I'm special (but I'm not)
 		}
@@ -226,6 +230,8 @@ main:
 		assert.Lessf(t, target, what, "value `%v` is not less than `%v`", target, what)
 	case operationLte:
 		assert.LessOrEqualf(t, target, what, "value `%v` is not less than or equal `%v`", target, what)
+	case operationNeq:
+		assert.NotEqualf(t, what, target, "value `%v`, should not equal to `%v`, but it did", what, target)
 	default:
 		assert.Equalf(t, what, target, "expected: `%v`, got: `%v`", what, target)
 	}

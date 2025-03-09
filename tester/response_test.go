@@ -212,6 +212,16 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 				path:     "other.2",
 				expected: json.RawMessage(`{"object": {"other": 12, "value": 42}}`),
 			},
+			{
+				name: "test raw json",
+				body: `{"other": [{"value": "John"}, {"value": "Doe"}, {"value": "Mark", "extra": "extra"}]}`,
+				path: "other",
+				expected: []testStruct{
+					{Value: "John"},
+					{Value: "Doe"},
+					{Value: "Mark"},
+				},
+			},
 		} {
 			t.Run(item.name, func(t *testing.T) {
 				r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))

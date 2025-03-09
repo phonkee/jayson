@@ -179,6 +179,9 @@ func TestClient(t *testing.T) {
 						Do(t, ctx).
 						AssertStatus(t, http.StatusOK).
 						AssertJsonEquals(t, `{"status": "something", "host": "localhost"}`).
+						AssertJsonPath(t, "status", "something").
+						AssertJsonPath(t, "__len__", 2).
+						AssertJsonPath(t, "__keys__", []string{"status", "host"}).
 						Unmarshal(t,
 							tester.APIObject(t,
 								"status", &status,

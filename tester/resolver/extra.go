@@ -30,12 +30,18 @@ import (
 )
 
 // Arguments adds arguments to the resolver, these are named arguments
-func Arguments(t require.TestingT, args ...string) Extra {
-	return resolverExtra(func() []string { return args }, nil)
+func Arguments(t require.TestingT, kv ...string) Extra {
+	if len(kv)%2 != 0 {
+		require.Fail(t, "arguments must be in key/value pairs")
+	}
+	return resolverExtra(func() []string { return kv }, nil)
 }
 
 // Query adds query parameters to the resolver
 func Query(t require.TestingT, kv ...string) Extra {
+	if len(kv)%2 != 0 {
+		require.Fail(t, "arguments must be in key/value pairs")
+	}
 	return resolverExtra(nil, func() url.Values {
 		urlValues := url.Values{}
 		for i := 0; i < len(kv); i += 2 {

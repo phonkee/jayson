@@ -80,3 +80,13 @@ func (c *client) Request(t require.TestingT, method string, path string) APIRequ
 func (c *client) ReverseURL(t require.TestingT, name string, extra ...resolver.Extra) string {
 	return c.deps.ReverseURL(t, name, extra...)
 }
+
+// ReverseArgs adds arguments key value pairs to resolver.Extra for ReverseURL
+func (c *client) ReverseArgs(t require.TestingT, kv ...string) resolver.Extra {
+	return c.deps.ReverseArgs(t, kv...)
+}
+
+// ReverseQuery adds query key value pairs to resolver.Extra for ReverseURL
+func (c *client) ReverseQuery(t require.TestingT, kv ...string) resolver.Extra {
+	return c.deps.ReverseQuery(t, kv...)
+}

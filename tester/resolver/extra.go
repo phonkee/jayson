@@ -47,6 +47,20 @@ func Query(t require.TestingT, kv ...string) Extra {
 	})
 }
 
+// resolverExtra is an implementation of Extra
+func resolverExtra(argsFunc func() []string, queryFunc func() url.Values) Extra {
+	if argsFunc == nil {
+		argsFunc = func() []string { return nil }
+	}
+	if queryFunc == nil {
+		queryFunc = func() url.Values { return nil }
+	}
+	return &resolverExtraImpl{
+		argsFunc:  argsFunc,
+		queryFunc: queryFunc,
+	}
+}
+
 // resolverExtraImpl is an implementation of Extra
 // it is for internal use only
 type resolverExtraImpl struct {
@@ -68,18 +82,4 @@ func (r *resolverExtraImpl) Query() url.Values {
 		return nil
 	}
 	return r.queryFunc()
-}
-
-// resolverExtra is an implementation of Extra
-func resolverExtra(argsFunc func() []string, queryFunc func() url.Values) Extra {
-	if argsFunc == nil {
-		argsFunc = func() []string { return nil }
-	}
-	if queryFunc == nil {
-		queryFunc = func() url.Values { return nil }
-	}
-	return &resolverExtraImpl{
-		argsFunc:  argsFunc,
-		queryFunc: queryFunc,
-	}
 }

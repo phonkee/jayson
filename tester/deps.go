@@ -53,6 +53,18 @@ func (d *Deps) ReverseURL(t require.TestingT, name string, extra ...resolver.Ext
 	return d.Resolver.ReverseURL(t, name, extra...)
 }
 
+// ReverseArgs adds arguments key value pairs to resolver.Extra for ReverseURL
+func (d *Deps) ReverseArgs(t require.TestingT, kv ...string) resolver.Extra {
+	assert.NotNil(t, d.Resolver, "Resolver is required")
+	return resolver.Arguments(t, kv...)
+}
+
+// ReverseQuery adds query key value pairs to resolver.Extra for ReverseURL
+func (d *Deps) ReverseQuery(t require.TestingT, kv ...string) resolver.Extra {
+	assert.NotNil(t, d.Resolver, "Resolver is required")
+	return resolver.Query(t, kv...)
+}
+
 // Validate deps
 func (d *Deps) Validate(t require.TestingT) {
 	// clean address

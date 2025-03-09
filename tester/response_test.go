@@ -197,13 +197,13 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 			{
 				name:     "test slice of objects to pointer to integer",
 				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42}}]}`,
-				path:     "other.2.object.value",
+				path:     "other.2.object.value.__eq__",
 				expected: 42,
 			},
 			{
-				name:     "test slice of objects to pointer to integer",
+				name:     "test slice of objects to pointer to integer (with dots)",
 				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42}}]}`,
-				path:     "other.2.object.value",
+				path:     "other.2......object.value",
 				expected: ptrTo(42),
 			},
 			{
@@ -234,32 +234,69 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 
 	t.Run("test special operations", func(t *testing.T) {
 		t.Run("test special operation: __len__", func(t *testing.T) {
-			for _, item := range []struct {
-				name   string
-				body   string
-				path   string
-				expect any
-			}{
-				{
-					name:   "test len of array",
-					body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
-					path:   "other.__len__",
-					expect: 3,
-				},
-				{
-					name:   "test len of array",
-					body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
-					path:   "other.2.object.__len__",
-					expect: 2,
-				},
-			} {
-				t.Run(item.name, func(t *testing.T) {
-					r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
-					r.body = []byte(item.body)
+			t.Run("valid path", func(t *testing.T) {
+				for _, item := range []struct {
+					name   string
+					body   string
+					path   string
+					expect any
+				}{
+					{
+						name:   "test len of array",
+						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+						path:   "other.__len__",
+						expect: 3,
+					},
+					{
+						name:   "test len of array",
+						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+						path:   "other.2.object.__len__",
+						expect: 2,
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
 
-					r.AssertJsonPath(t, item.path, item.expect)
-				})
-			}
+						r.AssertJsonPath(t, item.path, item.expect)
+					})
+				}
+			})
+			t.Run("invalid path", func(t *testing.T) {
+				for _, item := range []struct {
+					name   string
+					body   string
+					path   string
+					expect string
+				}{
+					{
+						name:   "test len of string",
+						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+						path:   "other.0.name.__len__",
+						expect: "path: `other.0.name.__len__`, __len__ is only supported for arrays and objects",
+					},
+					{
+						name:   "test len of int",
+						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+						path:   "other.2.object.other.__len__",
+						expect: "path: `other.2.object.other.__len__`, __len__ is only supported for arrays and objects",
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
+
+						m := mocks.NewTestingT(t)
+						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expect))).Once()
+						m.On("FailNow").Run(func(args mock.Arguments) {
+							t.Skip()
+						})
+
+						r.AssertJsonPath(m, item.path, 1)
+					})
+				}
+
+			})
 		})
 		t.Run("test special operation: __keys__", func(t *testing.T) {
 			for _, item := range []struct {

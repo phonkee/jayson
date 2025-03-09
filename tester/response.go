@@ -129,7 +129,8 @@ main:
 				if err := json.NewDecoder(bytes.NewReader(raw)).Decode(&obj); err == nil {
 					raw = json.RawMessage(strconv.Itoa(len(obj)))
 				} else {
-					require.Failf(t, "failed to get length", "failed to get length of `%v`", path)
+					require.Failf(t, "", "path: `%v`, __len__ is only supported for arrays and objects", path)
+					return r
 				}
 			}
 			break main

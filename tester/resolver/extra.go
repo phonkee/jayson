@@ -55,12 +55,6 @@ func Query(t require.TestingT, kv ...string) Extra {
 
 // resolverExtra is an implementation of Extra
 func resolverExtra(argsFunc func() []string, queryFunc func() url.Values) Extra {
-	if argsFunc == nil {
-		argsFunc = func() []string { return nil }
-	}
-	if queryFunc == nil {
-		queryFunc = func() url.Values { return nil }
-	}
 	return &resolverExtraImpl{
 		argsFunc:  argsFunc,
 		queryFunc: queryFunc,

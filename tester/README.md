@@ -8,9 +8,7 @@ Tester provides a simple way to test restful APIs. It is based on the `testing` 
 You need to call `WithAPI` function with dependencies and then you provide closure where API will be available.
 This library supports http.Handler testing as well as http server testing (Address).
 
-
 ```go
-
 var (
     router = mux.NewRouter()
 )
@@ -34,7 +32,7 @@ type HealthResponse struct {
 func TestHealthHandler(t *testing.T) { 
     tester.WithAPI(t, &Deps{
         Resolver: resolver.NewGorillaMuxResolver(t, router), // url resolver for gorilla mux
-        Handler: router,
+        Handler: router, // use router as http.Handler
     }, func(api *API) {
         var status string
         

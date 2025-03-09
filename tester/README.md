@@ -10,7 +10,7 @@ This library supports http.Handler testing as well as http server testing (Addre
 
 ```go
 var (
-	// we will use gorilla mux router
+    // we will use gorilla mux router
     router = mux.NewRouter()
 )
 

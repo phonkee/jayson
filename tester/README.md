@@ -201,6 +201,11 @@ api.Get(t, "/api/v1/users").
 api.Get(t, "/api/v1/users").
     Do(context.Background()).
     AssertJsonPath(t, "data.users.0.name", "Peter")
+
+// assert that name of first user is not John
+api.Get(t, "/api/v1/users").
+    Do(context.Background()).
+    AssertJsonPath(t, "data.users.0.name.__neq__", "John")
 ```
 
 # Author

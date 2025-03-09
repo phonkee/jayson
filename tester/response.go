@@ -130,6 +130,24 @@ main:
 		if part == "" {
 			continue
 		}
+		// special case for __len__ which is used to get the length of the array or object
+		if part == "__len__" {
+			var array []json.RawMessage
+
+			// try to unmarshal into array first
+			if err := json.NewDecoder(bytes.NewReader(raw)).Decode(&array); err == nil {
+				raw = json.RawMessage(strconv.Itoa(len(array)))
+			} else {
+				var obj map[string]json.RawMessage
+				if err := json.NewDecoder(bytes.NewReader(raw)).Decode(&obj); err == nil {
+					raw = json.RawMessage(strconv.Itoa(len(obj)))
+				} else {
+					require.Failf(t, "failed to get length", "failed to get length of `%v`", path)
+				}
+			}
+			break main
+		}
+
 		// try to parse the part as a number so we know we need to unmarshal array
 		if number, err := strconv.ParseUint(part, 10, 64); err == nil {
 			var arr []json.RawMessage

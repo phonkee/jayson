@@ -290,7 +290,32 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 
 	t.Run("test special operations", func(t *testing.T) {
 		t.Run("test special operation: __len__", func(t *testing.T) {
+			for _, item := range []struct {
+				name   string
+				body   string
+				path   string
+				expect any
+			}{
+				{
+					name:   "test len of array",
+					body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+					path:   "other.__len__",
+					expect: 3,
+				},
+				{
+					name:   "test len of array",
+					body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+					path:   "other.2.object.__len__",
+					expect: 2,
+				},
+			} {
+				t.Run(item.name, func(t *testing.T) {
+					r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+					r.body = []byte(item.body)
 
+					r.AssertJsonPathEquals(t, item.path, item.expect)
+				})
+			}
 		})
 	})
 

@@ -100,7 +100,6 @@ const (
 func (r *response) AssertJsonPath(t require.TestingT, path string, what any) APIResponse {
 	// set operation to equals
 	op := operationEquals
-	_ = op
 
 	// check if path contains operation
 	path = strings.TrimSpace(path)

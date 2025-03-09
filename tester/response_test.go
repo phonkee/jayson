@@ -165,6 +165,12 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 				expected: "John",
 			},
 			{
+				name:     "whole object as RawMessage",
+				body:     `{"name": "John"}`,
+				path:     "",
+				expected: json.RawMessage(`{"name": "John"}`),
+			},
+			{
 				name:     "simple strings to pointer",
 				body:     `{"name": "John"}`,
 				path:     "name",

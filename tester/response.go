@@ -104,7 +104,6 @@ func (r *response) AssertJsonPath(t require.TestingT, path string, what any) API
 
 	// check if path contains operation
 	path = strings.TrimSpace(path)
-	require.NotZerof(t, path, "path is empty")
 
 	// first we get the splitted path
 	splitted := strings.Split(path, ".")

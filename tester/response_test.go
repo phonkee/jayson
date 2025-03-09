@@ -273,19 +273,28 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 					name   string
 					body   string
 					path   string
+					what   any
 					expect string
 				}{
 					{
 						name:   "test len of string",
 						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
 						path:   "other.0.name.__len__",
+						what:   1,
 						expect: "path: `other.0.name.__len__`, __len__ is only supported for arrays and objects",
 					},
 					{
 						name:   "test len of int",
 						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
 						path:   "other.2.object.other.__len__",
+						what:   1,
 						expect: "path: `other.2.object.other.__len__`, __len__ is only supported for arrays and objects",
+					},
+					{
+						name: "test len of int",
+						body: `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+						path: "other.2.object.other.__len__",
+						what: 1,
 					},
 				} {
 					t.Run(item.name, func(t *testing.T) {
@@ -298,7 +307,7 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 							t.Skip()
 						})
 
-						r.AssertJsonPath(m, item.path, 1)
+						r.AssertJsonPath(m, item.path, item.what)
 					})
 				}
 
@@ -410,12 +419,22 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 						expect:        -50,
 						expectMessage: "value `-60` is not greater than `-50`",
 					},
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": -60}}`,
+						path:          "object.name.__gt__",
+						expect:        json.RawMessage(`{}`),
+						expectMessage: "operation `__gt__` is not supported for `json.RawMessage`",
+					},
 				} {
 					t.Run(item.name, func(t *testing.T) {
 						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 						r.body = []byte(item.body)
 						m := mocks.NewTestingT(t)
 						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
+						m.On("FailNow").Run(func(args mock.Arguments) {
+							t.Skip()
+						}).Maybe()
 
 						r.AssertJsonPath(m, item.path, item.expect)
 					})
@@ -479,12 +498,22 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 						expect:        -50,
 						expectMessage: "value `-60` is not greater than or equal `-50`",
 					},
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": -60}}`,
+						path:          "object.name.__gte__",
+						expect:        json.RawMessage(`{}`),
+						expectMessage: "operation `__gte__` is not supported for `json.RawMessage`",
+					},
 				} {
 					t.Run(item.name, func(t *testing.T) {
 						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 						r.body = []byte(item.body)
 						m := mocks.NewTestingT(t)
 						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
+						m.On("FailNow").Run(func(args mock.Arguments) {
+							t.Skip()
+						}).Maybe()
 
 						r.AssertJsonPath(m, item.path, item.expect)
 					})
@@ -550,12 +579,22 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 						expect:        -70,
 						expectMessage: "value `-60` is not less than `-70`",
 					},
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": -60}}`,
+						path:          "object.name.__lt__",
+						expect:        json.RawMessage(`{}`),
+						expectMessage: "operation `__lt__` is not supported for `json.RawMessage`",
+					},
 				} {
 					t.Run(item.name, func(t *testing.T) {
 						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 						r.body = []byte(item.body)
 						m := mocks.NewTestingT(t)
 						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
+						m.On("FailNow").Run(func(args mock.Arguments) {
+							t.Skip()
+						}).Maybe()
 
 						r.AssertJsonPath(m, item.path, item.expect)
 					})
@@ -621,12 +660,22 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 						expect:        -70,
 						expectMessage: "value `-60` is not less than or equal `-70`",
 					},
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": -60}}`,
+						path:          "object.name.__lte__",
+						expect:        json.RawMessage(`{}`),
+						expectMessage: "operation `__lte__` is not supported for `json.RawMessage`",
+					},
 				} {
 					t.Run(item.name, func(t *testing.T) {
 						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 						r.body = []byte(item.body)
 						m := mocks.NewTestingT(t)
 						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
+						m.On("FailNow").Run(func(args mock.Arguments) {
+							t.Skip()
+						}).Maybe()
 
 						r.AssertJsonPath(m, item.path, item.expect)
 					})
@@ -691,12 +740,22 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 						expect:        -60,
 						expectMessage: "value `-60`, should not equal to `-60`, but it did",
 					},
+					{
+						name:          "test integer",
+						body:          `{"object": {"name": -60}}`,
+						path:          "object.name.__neq__",
+						expect:        json.RawMessage(`{}`),
+						expectMessage: "operation `__neq__` is not supported for `json.RawMessage`",
+					},
 				} {
 					t.Run(item.name, func(t *testing.T) {
 						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 						r.body = []byte(item.body)
 						m := mocks.NewTestingT(t)
 						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
+						m.On("FailNow").Run(func(args mock.Arguments) {
+							t.Skip()
+						}).Maybe()
 
 						r.AssertJsonPath(m, item.path, item.expect)
 					})

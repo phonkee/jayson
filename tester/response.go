@@ -87,8 +87,27 @@ func (r *response) AssertJsonEquals(t require.TestingT, expected any) APIRespons
 // operation is the type of operation for json path
 type operation int
 
+// String returns string representation of operation
+func (o operation) String() string {
+	switch o {
+	case operationEq:
+		return "__eq__"
+	case operationGt:
+		return "__gt__"
+	case operationGte:
+		return "__gte__"
+	case operationLt:
+		return "__lt__"
+	case operationLte:
+		return "__lte__"
+	case operationNeq:
+		return "__neq__"
+	}
+	return "unknown"
+}
+
 const (
-	operationEquals operation = iota
+	operationEq operation = iota
 	operationGt
 	operationGte
 	operationLt
@@ -99,7 +118,7 @@ const (
 // AssertJsonPath asserts that response body json path is equal to given value
 func (r *response) AssertJsonPath(t require.TestingT, path string, what any) APIResponse {
 	// set operation to equals
-	op := operationEquals
+	op := operationEq
 
 	// check if path contains operation
 	path = strings.TrimSpace(path)
@@ -167,7 +186,7 @@ main:
 			op = operationLte
 			break main
 		case "__eq__":
-			op = operationEquals
+			op = operationEq
 			break main
 		case "__neq__":
 			op = operationNeq
@@ -216,7 +235,12 @@ main:
 
 	// in case of json.RawMessage we call JSONEqf so it's compared as string in the correct order
 	if typ == jsonRawMessageType {
-		require.JSONEqf(t, string(what.(json.RawMessage)), string(target.(json.RawMessage)), "expectedError: %v, got: %v", what, target)
+		switch op {
+		case operationEq:
+			require.JSONEqf(t, string(what.(json.RawMessage)), string(target.(json.RawMessage)), "expectedError: %v, got: %v", what, target)
+		default:
+			require.Failf(t, "", "operation `%v` is not supported for `json.RawMessage`", op.String())
+		}
 		return r
 	}
 

@@ -49,8 +49,49 @@ type ResolverExtra interface {
 	Query() url.Values
 }
 
+// ResolverArgs adds arguments to the resolver
+func ResolverArgs(t require.TestingT, args ...string) ResolverExtra {
+	return resolverExtra(func() []string { return args }, nil)
+}
+
+// ResolverQuery adds query parameters to the resolver
+func ResolverQuery(t require.TestingT, query url.Values) ResolverExtra {
+	return resolverExtra(nil, func() url.Values { return query })
+}
+
+// resolverExtraImpl is an implementation of ResolverExtra
+type resolverExtraImpl struct {
+	argsFunc  func() []string
+	queryFunc func() url.Values
+}
+
+// Args returns a list of additional arguments that can be used to resolve the URL
+func (r *resolverExtraImpl) Args() []string {
+	return r.argsFunc()
+}
+
+// Query returns a list of additional query parameters that can be used to resolve the URL
+func (r *resolverExtraImpl) Query() url.Values {
+	return r.queryFunc()
+}
+
+// resolverExtra is an implementation of ResolverExtra
+func resolverExtra(argsFunc func() []string, queryFunc func() url.Values) ResolverExtra {
+	if argsFunc == nil {
+		argsFunc = func() []string { return nil }
+	}
+	if queryFunc == nil {
+		queryFunc = func() url.Values { return nil }
+	}
+	return &resolverExtraImpl{
+		argsFunc:  argsFunc,
+		queryFunc: queryFunc,
+	}
+}
+
 // NewGorillaResolver creates a new gorilla resolver
 func NewGorillaResolver(t require.TestingT, router *mux.Router) Resolver {
+	require.NotNilf(t, router, "resolver: Router is nil")
 	return &gorillaResolver{router: router}
 }
 
@@ -61,15 +102,31 @@ type gorillaResolver struct {
 
 // ReverseURL returns a URL by given name and extra arguments
 func (g *gorillaResolver) ReverseURL(t require.TestingT, name string, extra ...ResolverExtra) string {
-	require.NotNil(t, g.router, "Deps: Router is nil")
+	require.NotNil(t, g.router, "resolver: Router is nil")
 
 	// get route from router by name
 	route := g.router.Get(name)
 	require.NotNil(t, route, "route `%s` not found", name)
 
+	// add arguments to the URL
+	args := make([]string, 0)
+	for _, e := range extra {
+		args = append(args, e.Args()...)
+	}
+
 	// reverse the URL
-	reversedURL, err := route.URL()
+	reversedURL, err := route.URL(args...)
 	require.NoErrorf(t, err, "failed to reverse URL for route `%s`", name)
+
+	q := reversedURL.Query()
+	for _, e := range extra {
+		for k, v := range e.Query() {
+			for _, vv := range v {
+				q.Add(k, vv)
+			}
+		}
+	}
+	reversedURL.RawQuery = q.Encode()
 
 	return reversedURL.String()
 }

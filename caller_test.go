@@ -36,4 +36,11 @@ func TestCallerInfo(t *testing.T) {
 		assert.NotEmpty(t, ci.fn)
 		assert.NotZero(t, ci.line)
 	})
+
+	t.Run("test getCallerInfo with skip", func(t *testing.T) {
+		ci := getCallerInfo(100, 3)
+		assert.Equal(t, defaultUnknownFile, ci.file)
+		assert.Equal(t, defaultUnknownFn, ci.fn)
+		assert.Zero(t, ci.line)
+	})
 }

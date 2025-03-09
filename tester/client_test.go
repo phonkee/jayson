@@ -112,11 +112,32 @@ func TestClient(t *testing.T) {
 		})
 	})
 
-	t.Run("test address", func(t *testing.T) {
-		// create router so we have a handler to run server
+	t.Run("test reverse url", func(t *testing.T) {
 		router := newHealthRouter(t)
+		tester.WithAPI(t, &tester.Deps{
+			Resolver: resolver.NewGorillaResolver(t, router),
+			Handler:  router,
+		}, func(api tester.APIClient) {
+			assert.Equal(t,
+				"/api/v1/health",
+				api.ReverseURL(t, "api:v1:health"),
+			)
+			assert.Equal(t,
+				"/api/v1/health/database?page=1",
+				api.ReverseURL(t,
+					"api:v1:health:extra",
+					api.ReverseArgs(t, "component", "database"),
+					api.ReverseQuery(t, "page", "1"),
+				),
+			)
+		})
+	})
 
+	t.Run("test address", func(t *testing.T) {
 		t.Run("test error", func(t *testing.T) {
+			// create router so we have a handler to run server
+			router := newHealthRouter(t)
+
 			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
 				tester.WithAPI(t, &tester.Deps{
 					Resolver: resolver.NewGorillaResolver(t, router),
@@ -135,6 +156,7 @@ func TestClient(t *testing.T) {
 		})
 
 		t.Run("test success", func(t *testing.T) {
+			router := newHealthRouter(t)
 			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
 				tester.WithAPI(t, &tester.Deps{
 					Resolver: resolver.NewGorillaResolver(t, router),

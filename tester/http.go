@@ -22,47 +22,58 @@
  * SOFTWARE.
  */
 
-package jayson
+package tester
 
 import (
-	"regexp"
-	"runtime"
+	"context"
+	"fmt"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"net"
+	"net/http"
+	"testing"
 )
 
-var (
-	// patternJaysonPackage matches jayson package
-	patternJaysonPackage = regexp.MustCompile(`github.com/phonkee/jayson\..+`)
-)
-
-// getCallerInfo returns new caller info that is outside jayson package
-// This gives more accurate debug information.
-// This is only called when debug is set and the level is set to debug.
-// This function is called only from RegisterError/RegisterResponse functions.
-func getCallerInfo(maxDepth int) callerInfo {
-	for i := 1; i < maxDepth; i++ {
-		pc, file, no, ok := runtime.Caller(i)
-		if !ok {
-			break
-		}
-		funcName := runtime.FuncForPC(pc).Name()
-		if !patternJaysonPackage.MatchString(funcName) {
-			return callerInfo{
-				file: file,
-				fn:   funcName,
-				line: no,
-			}
-		}
+// WithHttpServer runs a new HTTP server with the provided handler and calls the provided function with the server address.
+func WithHttpServer(t *testing.T, handler http.Handler, fn func(t *testing.T, address string)) {
+	if handler == nil {
+		panic("handler is nil")
 	}
-	return callerInfo{
-		file: "<unknown>",
-		fn:   "<unknown>",
-		line: 0,
+	if fn == nil {
+		panic("closure is nil")
 	}
-}
 
-// callerInfo holds caller info
-type callerInfo struct {
-	file string
-	fn   string
-	line int
+	// listen to the first available port
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	// close listener on exit
+	defer func() {
+		_ = lis.Close()
+	}()
+
+	// prepare http server
+	srv := &http.Server{
+		Handler: handler,
+	}
+
+	// run server in goroutine
+	go func() {
+		_ = srv.Serve(lis)
+	}()
+
+	// prepare message
+	message := fmt.Sprintf("test http server on %v", lis.Addr().String())
+
+	// run test
+	t.Run(message, func(t *testing.T) {
+		// this should not panic
+		assert.NotPanicsf(t, func() {
+			// call function with address
+			fn(t, lis.Addr().String())
+		}, "closure should not panic")
+	})
+
+	// shutdown server now
+	assert.NoError(t, srv.Shutdown(context.Background()))
 }

@@ -24,8 +24,117 @@
 
 package tester
 
-import "testing"
+import (
+	"context"
+	"github.com/phonkee/jayson/tester/mocks"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+)
 
-func TestRequest_AssertJsonKeyEquals(t *testing.T) {
+// must panics if error is not nil
+func must[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// noopHandler does nothing for testing purposes
+type noopHandler struct{}
+
+func (n noopHandler) ServeHTTP(writer http.ResponseWriter, r *http.Request) {}
+
+func TestRequest_Header(t *testing.T) {
+	r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}})
+	r.Header(t, "key", "value")
+	r.Do(t, context.Background())
+	assert.Equal(t, []string{ContentTypeJSON}, r.header.Values(ContentTypeHeader))
+	assert.Equal(t, ContentTypeJSON, r.header.Get(ContentTypeHeader))
+	assert.Equal(t, "value", r.header.Get("key"))
+}
+
+func TestRequest_Query(t *testing.T) {
+	for _, item := range []struct {
+		name     string
+		url      string
+		query    map[string]string
+		expected string
+	}{
+		{
+			name:     "test query",
+			query:    map[string]string{"key": "value"},
+			expected: "key=value",
+		},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			rt := mocks.NewRoundTripper(t)
+
+			rt.On("RoundTrip", mock.MatchedBy(func(req *http.Request) bool {
+				return req.URL.RawQuery == item.expected
+			})).Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+			r := newRequest(
+				http.MethodGet,
+				item.url,
+				&Deps{
+					Address: "localhost:8080",
+					Client: &http.Client{
+						Transport: rt,
+					},
+				},
+			)
+			for key, value := range item.query {
+				r.Query(t, key, value)
+			}
+			r.Do(t, context.Background()).AssertStatus(t, http.StatusOK)
+		})
+	}
+}
+
+func TestRequest_Body(t *testing.T) {
+	for _, item := range []struct {
+		name     string
+		body     any
+		expected string
+	}{
+		{
+			name:     "test string",
+			body:     `{"value":"value"}`,
+			expected: `{"value":"value"}`,
+		},
+		{
+			name:     "test string",
+			body:     []byte(`{"value":"value"}`),
+			expected: `{"value":"value"}`,
+		},
+		{
+			name:     "test string",
+			body:     strings.NewReader(`{"value":"value"}`),
+			expected: `{"value":"value"}`,
+		},
+
+		{
+			name: "test struct",
+			body: struct {
+				Value string `json:"value"`
+			}{
+				Value: "value",
+			},
+			expected: `{"value":"value"}`,
+		},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}})
+			r.Body(t, item.body)
+
+			assert.JSONEq(t, item.expected, string(must(io.ReadAll(r.body))))
+		})
+	}
 
 }

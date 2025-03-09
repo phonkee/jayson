@@ -22,47 +22,52 @@
  * SOFTWARE.
  */
 
-package jayson
+package tester_test
 
 import (
-	"regexp"
-	"runtime"
+	"github.com/phonkee/jayson/tester"
+	"github.com/stretchr/testify/assert"
+	"net/http"
+	"testing"
 )
 
-var (
-	// patternJaysonPackage matches jayson package
-	patternJaysonPackage = regexp.MustCompile(`github.com/phonkee/jayson\..+`)
-)
-
-// getCallerInfo returns new caller info that is outside jayson package
-// This gives more accurate debug information.
-// This is only called when debug is set and the level is set to debug.
-// This function is called only from RegisterError/RegisterResponse functions.
-func getCallerInfo(maxDepth int) callerInfo {
-	for i := 1; i < maxDepth; i++ {
-		pc, file, no, ok := runtime.Caller(i)
-		if !ok {
-			break
+func TestWithHttpServer(t *testing.T) {
+	t.Run("test invalid args", func(t *testing.T) {
+		for _, item := range []struct {
+			handler http.Handler
+			fn      func(t *testing.T, address string)
+		}{
+			{nil, func(t *testing.T, address string) {}},
+			{nil, func(t *testing.T, address string) {}},
+			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), nil},
+		} {
+			assert.Panics(
+				t,
+				func() {
+					tester.WithHttpServer(
+						t,
+						item.handler,
+						item.fn,
+					)
+				},
+			)
 		}
-		funcName := runtime.FuncForPC(pc).Name()
-		if !patternJaysonPackage.MatchString(funcName) {
-			return callerInfo{
-				file: file,
-				fn:   funcName,
-				line: no,
-			}
-		}
-	}
-	return callerInfo{
-		file: "<unknown>",
-		fn:   "<unknown>",
-		line: 0,
-	}
-}
+	})
 
-// callerInfo holds caller info
-type callerInfo struct {
-	file string
-	fn   string
-	line int
+	t.Run("test valid args", func(t *testing.T) {
+		value := 0
+		tester.WithHttpServer(
+			t,
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				value++
+				w.WriteHeader(http.StatusOK)
+			}),
+			func(t *testing.T, address string) {
+				resp, err := http.DefaultClient.Get("http://" + address)
+				assert.NoError(t, err)
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+				assert.Equal(t, 1, value)
+			},
+		)
+	})
 }

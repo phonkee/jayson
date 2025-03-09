@@ -29,19 +29,22 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
-	"testing"
 )
 
+// newRequest creates a new *request instance
 func newRequest(method, path string, deps *Deps) *request {
 	return &request{
 		method: method,
 		path:   path,
 		deps:   deps,
+		header: make(http.Header),
+		query:  make(url.Values),
 	}
 }
 
@@ -56,7 +59,7 @@ type request struct {
 }
 
 // Body sets the body of the request
-func (r *request) Body(t *testing.T, body any) APIRequest {
+func (r *request) Body(t require.TestingT, body any) APIRequest {
 	switch body.(type) {
 	case string:
 		r.body = strings.NewReader(body.(string))
@@ -73,20 +76,28 @@ func (r *request) Body(t *testing.T, body any) APIRequest {
 }
 
 // Do does the request and returns the response
-func (r *request) Do(t *testing.T, ctx context.Context) APIResponse {
+func (r *request) Do(t require.TestingT, ctx context.Context) APIResponse {
 	req, err := http.NewRequestWithContext(ctx, r.method, r.path, r.body)
 	assert.NoErrorf(t, err, "failed to create request: %v", err)
+
+	// set content type to json
+	r.header.Set(ContentTypeHeader, ContentTypeJSON)
+
+	// set headers to request
+	req.Header = r.header
 
 	// prepare recorder for response
 	rw := httptest.NewRecorder()
 
-	assert.NotPanicsf(t, func() {
-		r.deps.Handler.ServeHTTP(rw, req)
-	}, "handler panic")
-
-	// add query if present
+	// merge query if present
 	if len(r.query) > 0 {
-		req.URL.RawQuery = r.query.Encode()
+		q := req.URL.Query()
+		for key, values := range r.query {
+			for _, value := range values {
+				q.Add(key, value)
+			}
+		}
+		req.URL.RawQuery = q.Encode()
 	}
 
 	// add header if present
@@ -94,11 +105,15 @@ func (r *request) Do(t *testing.T, ctx context.Context) APIResponse {
 		req.Header = r.header
 	}
 
-	// prepare response
-	result := &response{
-		rw:      rw,
-		request: req,
+	// do the request to the address or handler
+	if r.deps.Address != "" {
+		r.doAddress(t, rw, req)
+	} else {
+		r.doHandler(t, rw, req)
 	}
+
+	// prepare response
+	result := newResponse(rw, req)
 
 	// add body when present
 	if rw.Body != nil {
@@ -108,20 +123,54 @@ func (r *request) Do(t *testing.T, ctx context.Context) APIResponse {
 	return result
 }
 
-// Header sets the header of the request
-func (r *request) Header(t *testing.T, key, value string) APIRequest {
-	if r.header == nil {
-		r.header = make(http.Header)
+// doAddress does the request to the address
+func (r *request) doAddress(t require.TestingT, rw http.ResponseWriter, req *http.Request) {
+	// prepare client without any timeout since we add context to the request
+	var hc *http.Client
+	if r.deps.Client != nil {
+		hc = r.deps.Client
+	} else {
+		hc = &http.Client{}
 	}
+
+	// update host and scheme
+	req.URL.Host = r.deps.Address
+	req.URL.Scheme = "http"
+
+	resp, err := hc.Do(req)
+	require.NoErrorf(t, err, "failed to do request: %v", err)
+
+	// write status code and headers
+	rw.WriteHeader(resp.StatusCode)
+	for key, values := range resp.Header {
+		for _, value := range values {
+			rw.Header().Add(key, value)
+		}
+	}
+
+	// write body
+	if resp.Body != nil {
+		_, err := io.Copy(rw, resp.Body)
+		assert.NoErrorf(t, err, "failed to copy body: %v", err)
+	}
+}
+
+// doHandler does the request to the handler
+func (r *request) doHandler(t require.TestingT, rw http.ResponseWriter, req *http.Request) {
+	assert.NotPanicsf(t, func() {
+		r.deps.Handler.ServeHTTP(rw, req)
+	}, "handler panicked")
+}
+
+// Header sets the header of the request
+func (r *request) Header(t require.TestingT, key, value string) APIRequest {
 	r.header.Add(key, value)
 	return r
 }
 
 // Query sets the query of the request
-func (r *request) Query(t *testing.T, key, value string) APIRequest {
-	if r.query == nil {
-		r.query = make(url.Values)
-	}
+func (r *request) Query(t require.TestingT, key, value string) APIRequest {
+	r.query = make(url.Values)
 	r.query.Add(key, value)
 	return r
 }

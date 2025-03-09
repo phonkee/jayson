@@ -22,47 +22,43 @@
  * SOFTWARE.
  */
 
-package jayson
+package resolver_test
 
 import (
-	"regexp"
-	"runtime"
+	"encoding/json"
+	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/require"
+	"net/http"
+	"strings"
 )
 
-var (
-	// patternJaysonPackage matches jayson package
-	patternJaysonPackage = regexp.MustCompile(`github.com/phonkee/jayson\..+`)
-)
+// exampleResponse is a response struct for testing
+type exampleResponse struct {
+	Status string `json:"status"`
+	Host   string `json:"host"`
+}
 
-// getCallerInfo returns new caller info that is outside jayson package
-// This gives more accurate debug information.
-// This is only called when debug is set and the level is set to debug.
-// This function is called only from RegisterError/RegisterResponse functions.
-func getCallerInfo(maxDepth int) callerInfo {
-	for i := 1; i < maxDepth; i++ {
-		pc, file, no, ok := runtime.Caller(i)
-		if !ok {
-			break
-		}
-		funcName := runtime.FuncForPC(pc).Name()
-		if !patternJaysonPackage.MatchString(funcName) {
-			return callerInfo{
-				file: file,
-				fn:   funcName,
-				line: no,
-			}
-		}
-	}
-	return callerInfo{
-		file: "<unknown>",
-		fn:   "<unknown>",
-		line: 0,
+// exampleHandler is a handler for testing
+func exampleHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(exampleResponse{
+		Status: "something",
+		Host:   "localhost",
+	}); err != nil {
+		panic(err)
 	}
 }
 
-// callerInfo holds caller info
-type callerInfo struct {
-	file string
-	fn   string
-	line int
+// MatchByStringContains matches string by substring
+func matchByStringContains(s string) func(in string) bool {
+	return func(in string) bool {
+		return strings.Contains(in, s)
+	}
+}
+
+func newHealthRouter(t require.TestingT) *mux.Router {
+	router := mux.NewRouter()
+	router.HandleFunc("/api/v1/health", exampleHandler).Methods(http.MethodGet).Name("api:v1:health")
+	router.HandleFunc("/api/v1/health/{component}", exampleHandler).Methods(http.MethodGet).Name("api:v1:health:extra")
+	return router
 }

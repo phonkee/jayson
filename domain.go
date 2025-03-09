@@ -72,7 +72,6 @@ var (
 	Warning = errors.New("jayson: warning")
 	// ErrImproperlyConfigured is error returned when Jayson is improperly configured.
 	ErrImproperlyConfigured = errors.New("jayson: improperly configured")
-	ErrAlreadyRegistered    = fmt.Errorf("%w: already registered", ErrImproperlyConfigured)
 	WarnAlreadyRegistered   = fmt.Errorf("%w: already registered", Warning)
 )
 

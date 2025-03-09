@@ -25,13 +25,13 @@
 package tester
 
 import (
+	"github.com/phonkee/jayson/tester/resolver"
 	"github.com/stretchr/testify/require"
 	"net/http"
-	"testing"
 )
 
 // WithAPI runs the given function with a new APIClient instance
-func WithAPI(t *testing.T, deps *Deps, fn func(APIClient)) {
+func WithAPI(t require.TestingT, deps *Deps, fn func(APIClient)) {
 	// validate deps first
 	deps.Validate(t)
 
@@ -40,7 +40,7 @@ func WithAPI(t *testing.T, deps *Deps, fn func(APIClient)) {
 }
 
 // newClient creates a new *client instance
-func newClient(t *testing.T, deps *Deps) *client {
+func newClient(t require.TestingT, deps *Deps) *client {
 	return &client{
 		deps: deps,
 	}
@@ -52,44 +52,41 @@ type client struct {
 }
 
 // Delete does a DELETE response to the APIClient
-func (c *client) Delete(t *testing.T, path string) APIRequest {
+func (c *client) Delete(t require.TestingT, path string) APIRequest {
 	return c.Request(t, http.MethodDelete, path)
 }
 
 // Get does a GET response to the APIClient
-func (c *client) Get(t *testing.T, path string) APIRequest {
+func (c *client) Get(t require.TestingT, path string) APIRequest {
 	return c.Request(t, http.MethodGet, path)
 }
 
 // Post does a POST response to the APIClient
-func (c *client) Post(t *testing.T, path string) APIRequest {
+func (c *client) Post(t require.TestingT, path string) APIRequest {
 	return c.Request(t, http.MethodPost, path)
 }
 
 // Put does a PUT response to the APIClient
-func (c *client) Put(t *testing.T, path string) APIRequest {
+func (c *client) Put(t require.TestingT, path string) APIRequest {
 	return c.Request(t, http.MethodPut, path)
 }
 
 // Request does a response to the APIClient
-func (c *client) Request(t *testing.T, method string, path string) APIRequest {
+func (c *client) Request(t require.TestingT, method string, path string) APIRequest {
 	return newRequest(method, path, c.deps)
 }
 
-// ReverseURL creates a path by given url name and url arguments
-// name is the name of the route
-// vars are the variables to replace in the route
-// query is the query string to add to the URL
-func (c *client) ReverseURL(t *testing.T, name string, vars ...string) string {
-	require.NotNil(t, c.deps.Router, "Deps: Router is nil")
+// ReverseURL creates a path by given url name and resolver extra
+func (c *client) ReverseURL(t require.TestingT, name string, extra ...resolver.Extra) string {
+	return c.deps.ReverseURL(t, name, extra...)
+}
 
-	// get route from router by name
-	route := c.deps.Router.Get(name)
-	require.NotNil(t, route, "route `%s` not found", name)
+// ReverseArgs adds arguments key value pairs to resolver.Extra for ReverseURL
+func (c *client) ReverseArgs(t require.TestingT, kv ...string) resolver.Extra {
+	return c.deps.ReverseArgs(t, kv...)
+}
 
-	// reverse the URL
-	reversedURL, err := route.URL(vars...)
-	require.NoErrorf(t, err, "failed to reverse URL for route `%s`", name)
-
-	return reversedURL.String()
+// ReverseQuery adds query key value pairs to resolver.Extra for ReverseURL
+func (c *client) ReverseQuery(t require.TestingT, kv ...string) resolver.Extra {
+	return c.deps.ReverseQuery(t, kv...)
 }

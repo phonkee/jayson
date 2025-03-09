@@ -25,25 +25,55 @@
 package tester
 
 import (
-	"github.com/gorilla/mux"
+	"github.com/phonkee/jayson/tester/resolver"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
-	"testing"
+	"net/url"
+	"strings"
 )
 
 // Deps is the dependencies for the APIClient
+// Router is optional, if not provided, ReverseURL will not work
+// One of Handler or Address is required
 type Deps struct {
-	// Router - currently required
-	Router *mux.Router
-	// If the Handler is nil, Router will be used as the handler
+	// Handler is the http.Handler
 	Handler http.Handler
+	// Addr is the address of the server
+	Address string
+	// Client sets custom http client
+	Client *http.Client
+	// Resolver is the URL resolver
+	Resolver resolver.Resolver
+}
+
+// ReverseURL resolves URL by name
+func (d *Deps) ReverseURL(t require.TestingT, name string, extra ...resolver.Extra) string {
+	assert.NotNil(t, d.Resolver, "Resolver is required")
+	return d.Resolver.ReverseURL(t, name, extra...)
+}
+
+// ReverseArgs adds arguments key value pairs to resolver.Extra for ReverseURL
+func (d *Deps) ReverseArgs(t require.TestingT, kv ...string) resolver.Extra {
+	assert.NotNil(t, d.Resolver, "Resolver is required")
+	return resolver.Arguments(t, kv...)
+}
+
+// ReverseQuery adds query key value pairs to resolver.Extra for ReverseURL
+func (d *Deps) ReverseQuery(t require.TestingT, kv ...string) resolver.Extra {
+	assert.NotNil(t, d.Resolver, "Resolver is required")
+	return resolver.Query(t, kv...)
 }
 
 // Validate deps
-func (d *Deps) Validate(t *testing.T) {
-	require.NotNil(t, d.Router, "Deps: Router is nil")
-	// if the handler is nil, use the router
-	if d.Handler == nil {
-		d.Handler = d.Router
+func (d *Deps) Validate(t require.TestingT) {
+	// clean address
+	if d.Address = strings.TrimSpace(d.Address); d.Address != "" {
+		// parse url here
+		if parsed, err := url.Parse(d.Address); err == nil && parsed.Host != "" {
+			d.Address = parsed.Host
+		}
 	}
+	// check if exampleHandler or Address is provided
+	require.Falsef(t, d.Handler == nil && d.Address == "", "Handler or Address is required")
 }

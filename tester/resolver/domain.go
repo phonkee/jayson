@@ -22,47 +22,24 @@
  * SOFTWARE.
  */
 
-package jayson
+package resolver
 
 import (
-	"regexp"
-	"runtime"
+	"github.com/stretchr/testify/require"
+	"net/url"
 )
 
-var (
-	// patternJaysonPackage matches jayson package
-	patternJaysonPackage = regexp.MustCompile(`github.com/phonkee/jayson\..+`)
-)
-
-// getCallerInfo returns new caller info that is outside jayson package
-// This gives more accurate debug information.
-// This is only called when debug is set and the level is set to debug.
-// This function is called only from RegisterError/RegisterResponse functions.
-func getCallerInfo(maxDepth int) callerInfo {
-	for i := 1; i < maxDepth; i++ {
-		pc, file, no, ok := runtime.Caller(i)
-		if !ok {
-			break
-		}
-		funcName := runtime.FuncForPC(pc).Name()
-		if !patternJaysonPackage.MatchString(funcName) {
-			return callerInfo{
-				file: file,
-				fn:   funcName,
-				line: no,
-			}
-		}
-	}
-	return callerInfo{
-		file: "<unknown>",
-		fn:   "<unknown>",
-		line: 0,
-	}
+// Resolver is an interface that can be used to resolve URLs
+// from the given name and extra arguments
+type Resolver interface {
+	// ReverseURL returns a URL by given name and extra arguments
+	ReverseURL(t require.TestingT, name string, extra ...Extra) string
 }
 
-// callerInfo holds caller info
-type callerInfo struct {
-	file string
-	fn   string
-	line int
+// Extra is an interface that can be used to pass additional information to the url resolver
+type Extra interface {
+	// Args returns a list of additional arguments that can be used to resolve the URL
+	Args() []string
+	// Query returns a list of additional query parameters that can be used to resolve the URL
+	Query() url.Values
 }

@@ -22,47 +22,15 @@
  * SOFTWARE.
  */
 
-package jayson
+package tester
 
 import (
-	"regexp"
-	"runtime"
+	"github.com/stretchr/testify/require"
 )
 
-var (
-	// patternJaysonPackage matches jayson package
-	patternJaysonPackage = regexp.MustCompile(`github.com/phonkee/jayson\..+`)
-)
-
-// getCallerInfo returns new caller info that is outside jayson package
-// This gives more accurate debug information.
-// This is only called when debug is set and the level is set to debug.
-// This function is called only from RegisterError/RegisterResponse functions.
-func getCallerInfo(maxDepth int) callerInfo {
-	for i := 1; i < maxDepth; i++ {
-		pc, file, no, ok := runtime.Caller(i)
-		if !ok {
-			break
-		}
-		funcName := runtime.FuncForPC(pc).Name()
-		if !patternJaysonPackage.MatchString(funcName) {
-			return callerInfo{
-				file: file,
-				fn:   funcName,
-				line: no,
-			}
-		}
-	}
-	return callerInfo{
-		file: "<unknown>",
-		fn:   "<unknown>",
-		line: 0,
-	}
-}
-
-// callerInfo holds caller info
-type callerInfo struct {
-	file string
-	fn   string
-	line int
+// TestingT is a mock implementation of the require.TestingT interface.
+//
+//go:generate mockery --name TestingT --filename testing.go
+type TestingT interface {
+	require.TestingT
 }

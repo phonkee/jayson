@@ -22,25 +22,34 @@
  * SOFTWARE.
  */
 
-package tester
+package tester_test
 
 import (
 	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"github.com/phonkee/jayson/tester"
+	"github.com/phonkee/jayson/tester/mocks"
+	"github.com/phonkee/jayson/tester/resolver"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"net/http"
+	"strings"
 	"testing"
+	"time"
 )
 
-type HealthResponse struct {
+// exampleResponse is a response struct for testing
+type exampleResponse struct {
 	Status string `json:"status"`
 	Host   string `json:"host"`
 }
 
-func HealthHandler(w http.ResponseWriter, r *http.Request) {
+// exampleHandler is a handler for testing
+func exampleHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(HealthResponse{
+	if err := json.NewEncoder(w).Encode(exampleResponse{
 		Status: "something",
 		Host:   "localhost",
 	}); err != nil {
@@ -48,55 +57,193 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func newHealthRouter(t *testing.T) *mux.Router {
-	router := mux.NewRouter()
-	router.HandleFunc("/api/v1/health", HealthHandler).Methods(http.MethodGet).Name("api:v1:health")
-	return router
+// MatchByStringContains matches string by substring
+func matchByStringContains(s string) func(in string) bool {
+	return func(in string) bool {
+		return strings.Contains(in, s)
+	}
 }
 
-func TestAPI(t *testing.T) {
-	router := newHealthRouter(t)
-	WithAPI(t, &Deps{
-		Router: router,
-	}, func(api APIClient) {
-		// context first
-		ctx := context.Background()
-
-		var (
-			host   string
-			status string
-		)
-
-		// test pointer in AssertJsonKeyEquals
-		ptrStatus := ptrTo("something")
-		statusValue := "something"
-
-		// response struct
-		rr := HealthResponse{}
-
-		// do response
-		api.Request(t, http.MethodGet, api.ReverseURL(t, "api:v1:health")).
-			Do(t, ctx).
-			AssertStatus(t, http.StatusOK).
-			AssertJsonEquals(t, `{"status": "something", "host": "localhost"}`).
-			Unmarshal(t,
-				APIObject(t,
-					"status", &status,
-					"host", &host,
-				),
-			).
-			Unmarshal(t, &rr).
-			AssertJsonKeyEquals(t, "status", "something").
-			AssertJsonKeyEquals(t, "status", statusValue).
-			AssertJsonKeyEquals(t, "status", ptrStatus).
-			AssertJsonKeyEquals(t, "host", "localhost")
-
-		assert.Equal(t, "something", status)
-		assert.Equal(t, "localhost", host)
-	})
+func newHealthRouter(t require.TestingT) *mux.Router {
+	router := mux.NewRouter()
+	router.HandleFunc("/api/v1/health", exampleHandler).Methods(http.MethodGet).Name("api:v1:health")
+	router.HandleFunc("/api/v1/health/{component}", exampleHandler).Methods(http.MethodGet).Name("api:v1:health:extra")
+	return router
 }
 
 // ptrTo helper
 func ptrTo[T any](v T) *T {
 	return &v
+}
+
+func TestClient(t *testing.T) {
+	t.Run("test handler", func(t *testing.T) {
+		router := newHealthRouter(t)
+		tester.WithAPI(t, &tester.Deps{
+			Resolver: resolver.NewGorillaResolver(t, router),
+			Handler:  router,
+		}, func(api tester.APIClient) {
+			// context first
+			ctx := context.Background()
+
+			var (
+				host   string
+				status string
+			)
+
+			// response struct
+			rr := exampleResponse{}
+
+			// do response
+			api.Request(t, http.MethodGet, api.ReverseURL(t, "api:v1:health")).
+				Do(t, ctx).
+				AssertStatus(t, http.StatusOK).
+				AssertJsonEquals(t, `{"status": "something", "host": "localhost"}`).
+				Unmarshal(t,
+					tester.APIObject(t,
+						"status", &status,
+						"host", &host,
+					),
+				).
+				Unmarshal(t, &rr)
+
+			assert.Equal(t, "something", status)
+			assert.Equal(t, "localhost", host)
+		})
+	})
+
+	t.Run("test reverse url", func(t *testing.T) {
+		router := newHealthRouter(t)
+		tester.WithAPI(t, &tester.Deps{
+			Resolver: resolver.NewGorillaResolver(t, router),
+			Handler:  router,
+		}, func(api tester.APIClient) {
+			assert.Equal(t,
+				"/api/v1/health",
+				api.ReverseURL(t, "api:v1:health"),
+			)
+			assert.Equal(t,
+				"/api/v1/health/database?page=1",
+				api.ReverseURL(t,
+					"api:v1:health:extra",
+					api.ReverseArgs(t, "component", "database"),
+					api.ReverseQuery(t, "page", "1"),
+				),
+			)
+		})
+	})
+
+	t.Run("test address", func(t *testing.T) {
+		t.Run("test error", func(t *testing.T) {
+			// create router so we have a handler to run server
+			router := newHealthRouter(t)
+
+			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
+				tester.WithAPI(t, &tester.Deps{
+					Resolver: resolver.NewGorillaResolver(t, router),
+					Address:  address,
+				}, func(api tester.APIClient) {
+					// context first
+					ctx, cf := context.WithTimeout(context.Background(), time.Second*2)
+					defer cf()
+
+					// do response
+					api.Request(t, http.MethodGet, "/not/exist").
+						Do(t, ctx).
+						AssertStatus(t, http.StatusNotFound)
+				})
+			})
+		})
+
+		t.Run("test success", func(t *testing.T) {
+			router := newHealthRouter(t)
+			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
+				tester.WithAPI(t, &tester.Deps{
+					Resolver: resolver.NewGorillaResolver(t, router),
+					Address:  address,
+				}, func(api tester.APIClient) {
+					// context first
+					ctx, cf := context.WithTimeout(context.Background(), time.Second*2)
+					defer cf()
+
+					var (
+						host   string
+						status string
+					)
+
+					// response struct
+					rr := exampleResponse{}
+
+					// do response
+					api.Request(t, http.MethodGet, api.ReverseURL(t, "api:v1:health")).
+						Do(t, ctx).
+						AssertStatus(t, http.StatusOK).
+						AssertJsonEquals(t, `{"status": "something", "host": "localhost"}`).
+						AssertJsonPath(t, "status", "something").
+						AssertJsonPath(t, "__len__", 2).
+						AssertJsonPath(t, "__keys__", []string{"status", "host"}).
+						Unmarshal(t,
+							tester.APIObject(t,
+								"status", &status,
+								"host", &host,
+							),
+						).
+						Unmarshal(t, &rr)
+
+					assert.Equal(t, "something", status)
+					assert.Equal(t, "localhost", host)
+				})
+
+			})
+		})
+
+	})
+
+}
+
+func TestClient_MethodAliases(t *testing.T) {
+	testMethod := func(t *testing.T, method string, fn func(client tester.APIClient) func(t require.TestingT, path string) tester.APIRequest) {
+		name := "test " + method
+		t.Run(name, func(t *testing.T) {
+			rt := mocks.NewRoundTripper(t)
+			resp := &http.Response{
+				StatusCode: http.StatusOK,
+			}
+			// expect round trip
+			rt.On("RoundTrip", mock.MatchedBy(func(r *http.Request) bool {
+				return r.Method == method
+			})).Return(resp, nil)
+			hc := &http.Client{
+				Transport: rt,
+			}
+
+			tester.WithAPI(t, &tester.Deps{
+				Address: "http://localhost",
+				Client:  hc,
+			}, func(api tester.APIClient) {
+				// context first
+				ctx := context.Background()
+
+				fn(api)(t, "/api/v1/health").Do(t, ctx)
+			})
+
+		})
+	}
+
+	testMethod(t, http.MethodDelete, func(client tester.APIClient) func(t require.TestingT, path string) tester.APIRequest {
+		return client.Delete
+	})
+
+	testMethod(t, http.MethodGet, func(client tester.APIClient) func(t require.TestingT, path string) tester.APIRequest {
+		return client.Get
+	})
+
+	testMethod(t, http.MethodPost, func(client tester.APIClient) func(t require.TestingT, path string) tester.APIRequest {
+		return client.Post
+	})
+
+	testMethod(t, http.MethodPut, func(client tester.APIClient) func(t require.TestingT, path string) tester.APIRequest {
+		return client.Put
+	})
+
 }

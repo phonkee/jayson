@@ -9,6 +9,8 @@ You need to call `WithAPI` function with dependencies and then you provide closu
 This library supports http.Handler testing as well as http server testing (Address).
 
 ```go
+package main
+
 var (
     // we will use gorilla mux router
     router = mux.NewRouter()

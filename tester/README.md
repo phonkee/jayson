@@ -65,7 +65,6 @@ func TestHealthHandler(t *testing.T) {
             Do(t, context.TODO()).
             AssertStatus(t, http.StatusOK).
             AssertJsonKeyEquals(t, "status", "ok")
-		
     })
 }
 ```

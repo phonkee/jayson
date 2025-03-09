@@ -48,7 +48,7 @@ type APIClient interface {
 	Request(t require.TestingT, method string, path string) APIRequest
 
 	// ReverseURL creates a path by given url name and url arguments
-	ReverseURL(t require.TestingT, name string, vars ...string) string
+	ReverseURL(t require.TestingT, name string, extra ...ResolverExtra) string
 }
 
 // APIRequest is the interface for testing the rest APIClient response

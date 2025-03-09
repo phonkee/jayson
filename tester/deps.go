@@ -44,6 +44,8 @@ type Deps struct {
 	Address string
 	// Client sets custom http client
 	Client *http.Client
+	// Resolver is the URL resolver
+	Resolver Resolver
 }
 
 // Validate deps

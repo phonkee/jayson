@@ -79,16 +79,7 @@ func (c *client) Request(t require.TestingT, method string, path string) APIRequ
 // name is the name of the route
 // vars are the variables to replace in the route
 // query is the query string to add to the URL
-func (c *client) ReverseURL(t require.TestingT, name string, vars ...string) string {
-	require.NotNil(t, c.deps.Router, "Deps: Router is nil")
-
-	// get route from router by name
-	route := c.deps.Router.Get(name)
-	require.NotNil(t, route, "route `%s` not found", name)
-
-	// reverse the URL
-	reversedURL, err := route.URL(vars...)
-	require.NoErrorf(t, err, "failed to reverse URL for route `%s`", name)
-
-	return reversedURL.String()
+func (c *client) ReverseURL(t require.TestingT, name string, extra ...ResolverExtra) string {
+	require.NotNil(t, c.deps.Resolver, "Deps: Resolver is nil")
+	return c.deps.Resolver.ReverseURL(t, name, extra...)
 }

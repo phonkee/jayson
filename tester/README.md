@@ -9,7 +9,13 @@ You need to call `WithAPI` function with dependencies and then you provide closu
 This library supports http.Handler testing as well as http server testing (Address).
 
 ```go
-package main
+package example_test
+
+import (
+	"encoding/json"
+	"github.com/phonkee/jayson/tester"
+	"github.com/phonkee/jayson/tester/resolver"
+)
 
 var (
     // we will use gorilla mux router
@@ -28,6 +34,7 @@ func init() {
     }).Methods(http.MethodGet).Name("api:v1:health")
 }
 
+// HealthResponse is a simple response struct that returns status
 type HealthResponse struct {
     Status string `json:"status"`
 }

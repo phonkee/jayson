@@ -293,8 +293,11 @@ main:
 		// try to parse the part as a number so we know we need to unmarshal array
 		if number, err := strconv.ParseUint(part, 10, 64); err == nil {
 			var arr []json.RawMessage
+
 			require.NoErrorf(t, json.Unmarshal(raw, &arr), "failed to unmarshal array `%v` into `%T`", path, what)
+
 			require.Lessf(t, int(number), len(arr), "index out of bounds: %d", number)
+
 			raw = arr[number]
 			continue main
 		}

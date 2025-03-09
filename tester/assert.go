@@ -27,26 +27,28 @@ package tester
 import (
 	"encoding/json"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/constraints"
 )
 
 // Assertion is a type that represents a single assertion
 type Assertion interface {
-	Assert(t require.TestingT, value json.RawMessage) (any, error)
+	Assert(t require.TestingT, value json.RawMessage, err error) (any, error)
 	UseEmpty() bool
 }
 
 // AssertEqual asserts that given value is equal to the value in the response
 func AssertEqual(value any) Assertion {
 	return newAssertion(
-		func(t require.TestingT, what json.RawMessage) (any, error) {
+		func(t require.TestingT, what json.RawMessage, err error) (any, error) {
 			return nil, nil
 		},
 		nil,
 	)
 }
 
+// newAssertion creates a new assertion
 func newAssertion(
-	assert func(t require.TestingT, value json.RawMessage) (any, error),
+	assert func(t require.TestingT, value json.RawMessage, err error) (any, error),
 	useEmpty func() bool,
 ) Assertion {
 	return &assertion{
@@ -56,13 +58,13 @@ func newAssertion(
 }
 
 type assertion struct {
-	assert   func(t require.TestingT, value json.RawMessage) (any, error)
+	assert   func(t require.TestingT, value json.RawMessage, err error) (any, error)
 	useEmpty func() bool
 }
 
-func (a *assertion) Assert(t require.TestingT, value json.RawMessage) (any, error) {
+func (a *assertion) Assert(t require.TestingT, value json.RawMessage, err error) (any, error) {
 	if a.assert != nil {
-		return a.assert(t, value)
+		return a.assert(t, value, err)
 	}
 	return nil, nil
 }
@@ -74,21 +76,25 @@ func (a *assertion) UseEmpty() bool {
 	return false
 }
 
-//func AssertExists(bool) Assertion {
-//	return nil
-//}
+type Number interface {
+	constraints.Integer | constraints.Float
+}
+
+func AssertLen[T Number](length T) Assertion {
+	return nil
+}
+
+//	func AssertExists(bool) Assertion {
+//		return nil
+//	}
 //
-//func AssertGt(value int) Assertion {
-//	return nil
-//}
+//	func AssertGt(value int) Assertion {
+//		return nil
+//	}
 //
-//func AssertGte(value int) Assertion {
-//	return nil
-//}
-//
-//func AssertLen(length int) Assertion {
-//	return nil
-//}
+//	func AssertGte(value int) Assertion {
+//		return nil
+//	}
 //
 //func AssertLt(value int) Assertion {
 //	return nil

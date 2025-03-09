@@ -75,7 +75,7 @@ func (r *response) AssertJsonEquals(t require.TestingT, expected any) APIRespons
 		expectedStr = string(expected.([]byte))
 	default:
 		b, err := json.Marshal(expected)
-		require.NoErrorf(t, err, "failed to marshal expected value: %v", expected)
+		require.NoErrorf(t, err, "failed to marshal expectedError value: %v", expected)
 		expectedStr = string(b)
 	}
 
@@ -108,7 +108,7 @@ func (r *response) AssertJsonKeyEquals(t require.TestingT, key string, what any)
 	target := val.Interface()
 	assert.NoError(t, json.NewDecoder(bytes.NewBuffer(v)).Decode(&target))
 
-	assert.Equalf(t, what, target, "expected: %v, got: %v", what, target)
+	assert.Equalf(t, what, target, "expectedError: %v, got: %v", what, target)
 
 	return r
 }
@@ -133,7 +133,7 @@ main:
 		// try to parse the part as a number so we know we need to unmarshal array
 		if number, err := strconv.ParseUint(part, 10, 64); err == nil {
 			var arr []json.RawMessage
-			require.NoErrorf(t, json.Unmarshal(raw, &arr), "failed to unmarshal array: %v", raw)
+			require.NoErrorf(t, json.Unmarshal(raw, &arr), "failed to unmarshal array `%v` into `%T`", path, what)
 			require.Lessf(t, int(number), len(arr), "index out of bounds: %d", number)
 			raw = arr[number]
 			continue main
@@ -143,9 +143,9 @@ main:
 		obj := make(map[string]json.RawMessage)
 
 		// unmarshal object
-		require.NoErrorf(t, json.Unmarshal(raw, &obj), "failed to unmarshal object: %v", raw)
+		require.NoErrorf(t, json.Unmarshal(raw, &obj), "failed to unmarshal `%v` into `%T`", path, what)
 
-		require.Containsf(t, obj, part, "key %s not found in object: %v", part, obj)
+		require.Containsf(t, obj, part, "key `%s` in path `%s` not found", part, path)
 
 		raw = obj[part]
 	}
@@ -161,7 +161,7 @@ main:
 
 	// prepare value
 	target := val.Interface()
-	assert.NoErrorf(t, json.NewDecoder(bytes.NewBuffer(raw)).Decode(target), "failed to unmarshal value: %v", raw)
+	require.NoErrorf(t, json.NewDecoder(bytes.NewBuffer(raw)).Decode(target), "failed to unmarshal `%v` into `%T`", path, what)
 
 	// when not pointer, we need to get the value
 	if typ.Kind() != reflect.Ptr {
@@ -170,11 +170,11 @@ main:
 
 	// in case of json.RawMessage we call JSONEqf so it's compared as string in the correct order
 	if typ == jsonRawMessageType {
-		require.JSONEqf(t, string(what.(json.RawMessage)), string(target.(json.RawMessage)), "expected: %v, got: %v", what, target)
+		require.JSONEqf(t, string(what.(json.RawMessage)), string(target.(json.RawMessage)), "expectedError: %v, got: %v", what, target)
 		return r
 	}
 
-	assert.Equalf(t, what, target, "expected: %v, got: %v", what, target)
+	assert.Equalf(t, what, target, "expectedError: %v, got: %v", what, target)
 
 	return r
 }

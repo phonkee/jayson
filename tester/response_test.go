@@ -284,13 +284,65 @@ func TestResponse_AssertJsonPathEquals(t *testing.T) {
 				r.body = []byte(item.body)
 
 				r.AssertJsonPathEquals(t, item.path, item.expected)
-
 			})
 		}
 	})
 
-	t.Run("test invalid path", func(t *testing.T) {
+	t.Run("test special operations", func(t *testing.T) {
+		t.Run("test special operation: __len__", func(t *testing.T) {
 
+		})
+	})
+
+	t.Run("test invalid path or wrong type", func(t *testing.T) {
+		for _, item := range []struct {
+			name          string
+			body          string
+			path          string
+			into          any
+			expectedError string
+		}{
+			{
+				name:          "wrong key in object",
+				body:          `{"name": "John"}`,
+				path:          "what",
+				expectedError: "key `what` in path `what` not found",
+			},
+			{
+				name:          "wrong path",
+				body:          `{"name": "John"}`,
+				path:          "0",
+				expectedError: "failed to unmarshal array `0` into",
+			},
+			{
+				name:          "wrong type",
+				body:          `{"name": "John"}`,
+				path:          "name",
+				into:          ptrTo(42),
+				expectedError: "failed to unmarshal `name` into `*int`",
+			},
+			{
+				name:          "wrong path",
+				body:          `[{"name": "John"}]`,
+				path:          "name",
+				into:          ptrTo(42),
+				expectedError: "failed to unmarshal `name` into `*int`",
+			},
+		} {
+			t.Run(item.name, func(t *testing.T) {
+				r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+				r.body = []byte(item.body)
+
+				m := mocks.NewTestingT(t)
+				m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectedError))).Once()
+				m.On("FailNow").Run(func(args mock.Arguments) {
+					// weird but this is the only way
+					t.Skip()
+				})
+
+				r.AssertJsonPathEquals(m, item.path, item.into)
+			})
+		}
 	})
 
 }

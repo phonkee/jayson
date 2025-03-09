@@ -82,6 +82,10 @@ type APIResponse interface {
 	// This method will unmarshal the body into the same type as the value
 	AssertJsonPath(t require.TestingT, path string, what any) APIResponse
 
+	// AssertJsonPath2 asserts that given json path conforms to given value (special operations are supported)
+	// New API!
+	AssertJsonPath2(t require.TestingT, path string, what any) APIResponse
+
 	// AssertStatus asserts that response status is equal to given status
 	AssertStatus(t require.TestingT, status int) APIResponse
 

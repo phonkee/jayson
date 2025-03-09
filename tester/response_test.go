@@ -761,9 +761,7 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 					})
 				}
 			})
-
 		})
-
 	})
 
 	t.Run("test invalid path or wrong type", func(t *testing.T) {

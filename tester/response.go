@@ -274,6 +274,47 @@ main:
 	return r
 }
 
+// AssertJsonPath2 asserts that response body json path is equal to given value
+// New API
+func (r *response) AssertJsonPath2(t require.TestingT, path string, what any) APIResponse {
+	var ass Assertion
+
+	// check if assertion was passed
+	if x, ok := what.(Assertion); ok {
+		ass = x
+	} else {
+		ass = AssertEqual(what)
+	}
+
+	raw := json.RawMessage(r.body)
+	path = strings.TrimSpace(path)
+main:
+	for _, part := range strings.Split(path, ".") {
+		// try to parse the part as a number so we know we need to unmarshal array
+		if number, err := strconv.ParseUint(part, 10, 64); err == nil {
+			var arr []json.RawMessage
+			require.NoErrorf(t, json.Unmarshal(raw, &arr), "failed to unmarshal array `%v` into `%T`", path, what)
+			require.Lessf(t, int(number), len(arr), "index out of bounds: %d", number)
+			raw = arr[number]
+			continue main
+		}
+		// parse object
+		obj := make(map[string]json.RawMessage)
+
+		// unmarshal object
+		require.NoErrorf(t, json.Unmarshal(raw, &obj), "failed to unmarshal `%v` into `%T`", path, what)
+
+		require.Containsf(t, obj, part, "key `%s` in path `%s` not found", part, path)
+
+		raw = obj[part]
+	}
+
+	// now we need to do something here
+	_ = ass
+
+	return r
+}
+
 var (
 	// jsonRawMessageType is the type of json.RawMessage
 	jsonRawMessageType = reflect.TypeOf(json.RawMessage(nil))

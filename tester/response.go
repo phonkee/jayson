@@ -116,6 +116,7 @@ main:
 		if part == "" {
 			continue
 		}
+		// special operations handling
 		switch part {
 		case "__len__":
 			var array []json.RawMessage
@@ -143,7 +144,7 @@ main:
 			}
 
 			original, ok := what.([]string)
-			require.Truef(t, ok, "expected `[]string`, got: %T: %v", what)
+			require.Truef(t, ok, "expected `[]string`, got: %T", what)
 
 			// now we need to sort the keys so we can compare them
 			sort.Strings(original)

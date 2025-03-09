@@ -73,11 +73,14 @@ type object struct {
 	T  require.TestingT
 }
 
+// UnmarshalJSON unmarshalls json object into multiple fields
 func (o *object) UnmarshalJSON(bytes []byte) error {
 	into := make(map[string]json.RawMessage)
 	err := json.Unmarshal(bytes, &into)
 	require.NoError(o.T, err)
 
+	// iterate over given key-value pairs and unmarshall them
+	// if not found, fail the test
 	for k, v := range o.kv {
 		raw, ok := into[k]
 		require.Truef(o.T, ok, "APIObject: key `%s` not found", k)

@@ -42,7 +42,7 @@ func TestHealthHandler(t *testing.T) {
             Do(t, context.TODO()).
             AssertStatus(t, http.StatusOK).
             Unmarshal(t, 
-                APIObject(t, "status", &status), // APIObject is helper function to unmarshal key from json object
+                APIObject(t, "status", &status), // APIObject deconstructs json object to value given key value pairs
             )
         assert.Equal(t, "ok", status)
 

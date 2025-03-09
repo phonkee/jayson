@@ -43,7 +43,7 @@ func TestHealthHandler(t *testing.T) {
             Do(context.Background()).
             AssertStatus(t, http.StatusOK).
             Unmarshal(t, 
-                APIObject(t, "status", &status),
+                APIObject(t, "status", &status), // APIObject is helper function to unmarshal key from json object
             )
         assert.Equal(t, "ok", status)
 
@@ -195,7 +195,7 @@ api.Get(t, "/api/v1/users").
 // assert that first user id is greater than 0
 api.Get(t, "/api/v1/users").
     Do(context.Background()).
-    AssertJsonPath(t, "data.users.0.id.__gte__", 0)
+    AssertJsonPath(t, "data.users.0.id.__gte__", 1)
 
 // assert that name of first user is Peter
 api.Get(t, "/api/v1/users").

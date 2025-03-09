@@ -72,6 +72,10 @@ func TestHealthHandler(t *testing.T) {//
 }
 ```
 
+# TODO:
+
+List of future todos
+
 # Author
 
 Peter Vrba <phonkee@phonkee.eu>

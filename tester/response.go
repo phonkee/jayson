@@ -32,6 +32,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strconv"
+	"strings"
 )
 
 // newResponse creates a new *response instance
@@ -110,6 +112,77 @@ func (r *response) AssertJsonKeyEquals(t require.TestingT, key string, what any)
 
 	return r
 }
+
+// AssertJsonPathEquals asserts that response body json path is equal to given value
+func (r *response) AssertJsonPathEquals(t require.TestingT, path string, what any) APIResponse {
+	path = strings.TrimSpace(path)
+	require.NotZerof(t, path, "path is empty")
+
+	// first we get the splitted path
+	splitted := strings.Split(path, ".")
+
+	// prepare response body as raw message
+	var raw = json.RawMessage(r.body)
+
+	// iterate over all parts of the path
+main:
+	for _, part := range splitted {
+		if part == "" {
+			continue
+		}
+		// try to parse the part as a number so we know we need to unmarshal array
+		if number, err := strconv.ParseUint(part, 10, 64); err == nil {
+			var arr []json.RawMessage
+			require.NoErrorf(t, json.Unmarshal(raw, &arr), "failed to unmarshal array: %v", raw)
+			require.Lessf(t, int(number), len(arr), "index out of bounds: %d", number)
+			raw = arr[number]
+			continue main
+		}
+
+		// parse object
+		obj := make(map[string]json.RawMessage)
+
+		// unmarshal object
+		require.NoErrorf(t, json.Unmarshal(raw, &obj), "failed to unmarshal object: %v", raw)
+
+		require.Containsf(t, obj, part, "key %s not found in object: %v", part, obj)
+
+		raw = obj[part]
+	}
+
+	// now we have the value in raw, we can unmarshal it into given value
+	var val reflect.Value
+	typ := reflect.TypeOf(what)
+	if typ.Kind() == reflect.Ptr {
+		val = reflect.New(typ.Elem())
+	} else {
+		val = reflect.New(typ)
+	}
+
+	// prepare value
+	target := val.Interface()
+	assert.NoError(t, json.NewDecoder(bytes.NewBuffer(raw)).Decode(target))
+
+	// when not pointer, we need to get the value
+	if typ.Kind() != reflect.Ptr {
+		target = val.Elem().Interface()
+	}
+
+	// we should check json.RawMessage
+	// in that case we need to call JSONEq
+	if typ == jsonRawMessageType {
+		require.JSONEq(t, string(what.(json.RawMessage)), string(target.(json.RawMessage)))
+		return r
+	}
+
+	assert.Equalf(t, what, target, "expected: %v, got: %v", what, target)
+
+	return r
+}
+
+var (
+	jsonRawMessageType = reflect.TypeOf(json.RawMessage(nil))
+)
 
 // AssertStatus asserts that response status is equal to given status
 func (r *response) AssertStatus(t require.TestingT, status int) APIResponse {

@@ -34,8 +34,11 @@ var (
 	patternJaysonPackage = regexp.MustCompile(`github.com/phonkee/jayson\..+`)
 )
 
-// newCallerInfo returns new caller info that is outside jayson package
-func newCallerInfo(maxDepth int) callerInfo {
+// getCallerInfo returns new caller info that is outside jayson package
+// This gives more accurate debug information.
+// This is only called when debug is set and the level is set to debug.
+// This function is called only from RegisterError/RegisterResponse functions.
+func getCallerInfo(maxDepth int) callerInfo {
 	for i := 1; i < maxDepth; i++ {
 		pc, file, no, ok := runtime.Caller(i)
 		if !ok {

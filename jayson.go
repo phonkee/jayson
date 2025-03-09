@@ -349,7 +349,7 @@ func (j *jayson) debugLogMethod(method string, fn ...func() []zap.Field) {
 	// check if we are on debug level
 	if ch := j.debug.Named("jayson").Check(zap.DebugLevel, "caller info"); ch != nil {
 		// try to Get caller info
-		caller := newCallerInfo(DebugMaxCallerDepth)
+		caller := getCallerInfo(DebugMaxCallerDepth)
 
 		fields := []zap.Field{
 			zap.String("method", method),

@@ -25,6 +25,7 @@
 package tester
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/phonkee/jayson/tester/mocks"
 	"github.com/stretchr/testify/assert"
@@ -212,6 +213,86 @@ func TestResponse_AssertJsonKeyEquals(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestResponse_AssertJsonPathEquals(t *testing.T) {
+
+	t.Run("test valid path", func(t *testing.T) {
+		for _, item := range []struct {
+			name     string
+			body     string
+			path     string
+			expected any
+		}{
+			{
+				name:     "simple strings",
+				body:     `{"name": "John"}`,
+				path:     "name",
+				expected: "John",
+			},
+			{
+				name:     "simple strings to pointer",
+				body:     `{"name": "John"}`,
+				path:     "name",
+				expected: ptrTo("John"),
+			},
+			{
+				name:     "test embedded struct strings",
+				body:     `{"other": {"name": "John"}}`,
+				path:     "other.name",
+				expected: "John",
+			},
+			{
+				name:     "test slice of objects to string",
+				body:     `{"other": [{"name": "John"}, {"name": "Doe"}]}`,
+				path:     "other.1.name",
+				expected: "Doe",
+			},
+			{
+				name:     "test slice of objects to object",
+				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": "Doe"}}]}`,
+				path:     "other.2.object",
+				expected: testStruct{Value: "Doe"},
+			},
+			{
+				name:     "test slice of objects to pointer to object",
+				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": "Doe"}}]}`,
+				path:     "other.2.object",
+				expected: &testStruct{Value: "Doe"},
+			},
+			{
+				name:     "test slice of objects to pointer to integer",
+				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42}}]}`,
+				path:     "other.2.object.value",
+				expected: 42,
+			},
+			{
+				name:     "test slice of objects to pointer to integer",
+				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42}}]}`,
+				path:     "other.2.object.value",
+				expected: ptrTo(42),
+			},
+			{
+				name:     "test raw json",
+				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+				path:     "other.2",
+				expected: json.RawMessage(`{"object": {"other": 12, "value": 42}}`),
+			},
+		} {
+			t.Run(item.name, func(t *testing.T) {
+				r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+				r.body = []byte(item.body)
+
+				r.AssertJsonPathEquals(t, item.path, item.expected)
+
+			})
+		}
+	})
+
+	t.Run("test invalid path", func(t *testing.T) {
+
+	})
+
 }
 
 func TestResponse_AssertStatus(t *testing.T) {

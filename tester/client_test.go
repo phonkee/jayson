@@ -56,8 +56,9 @@ func exampleHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func newHealthRouter(require.TestingT) *mux.Router {
+func newHealthRouter(t require.TestingT) *mux.Router {
 	router := mux.NewRouter()
+	assert.NotNil(t, router)
 	router.HandleFunc("/api/v1/health", exampleHandler).Methods(http.MethodGet).Name("api:v1:health")
 	router.HandleFunc("/api/v1/health/{component}", exampleHandler).Methods(http.MethodGet).Name("api:v1:health:extra")
 	return router

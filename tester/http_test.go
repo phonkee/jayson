@@ -25,6 +25,7 @@
 package tester_test
 
 import (
+	"context"
 	"github.com/phonkee/jayson/tester"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -45,6 +46,7 @@ func TestWithHttpServer(t *testing.T) {
 				func() {
 					tester.WithHttpServer(
 						t,
+						context.Background(),
 						item.handler,
 						item.fn,
 					)
@@ -57,6 +59,7 @@ func TestWithHttpServer(t *testing.T) {
 		value := 0
 		tester.WithHttpServer(
 			t,
+			context.Background(),
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				value++
 				w.WriteHeader(http.StatusOK)

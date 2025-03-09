@@ -27,8 +27,8 @@ package tester_test
 import (
 	"github.com/phonkee/jayson/tester"
 	"github.com/phonkee/jayson/tester/mocks"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"strings"
 	"testing"
@@ -44,8 +44,14 @@ func TestDeps_Validate(t *testing.T) {
 		} {
 			//m := mocks.NewTestingT(t)
 			// TODO:
-			item.deps.Validate(require.New(nil))
+			item.deps.Validate(nil)
 		}
+	})
+
+	t.Run("url as address", func(t *testing.T) {
+		deps := &tester.Deps{Address: "http://localhost:8080"}
+		deps.Validate(t)
+		assert.Equal(t, "localhost:8080", deps.Address)
 	})
 
 	t.Run("invalid", func(t *testing.T) {
@@ -59,7 +65,7 @@ func TestDeps_Validate(t *testing.T) {
 				return strings.Contains(msg, "exampleHandler or Address is required")
 			})).Once()
 			m.On("FailNow").Once()
-			item.deps.Validate(require.New(m))
+			item.deps.Validate(m)
 			m.AssertExpectations(t)
 			m.AssertNumberOfCalls(t, "Errorf", 1)
 			m.AssertNumberOfCalls(t, "FailNow", 1)

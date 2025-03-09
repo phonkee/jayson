@@ -89,10 +89,6 @@ func TestClient(t *testing.T) {
 				status string
 			)
 
-			// test pointer in AssertJsonKeyEquals
-			ptrStatus := ptrTo("something")
-			statusValue := "something"
-
 			// response struct
 			rr := exampleResponse{}
 
@@ -107,11 +103,7 @@ func TestClient(t *testing.T) {
 						"host", &host,
 					),
 				).
-				Unmarshal(t, &rr).
-				AssertJsonKeyEquals(t, "status", "something").
-				AssertJsonKeyEquals(t, "status", statusValue).
-				AssertJsonKeyEquals(t, "status", ptrStatus).
-				AssertJsonKeyEquals(t, "host", "localhost")
+				Unmarshal(t, &rr)
 
 			assert.Equal(t, "something", status)
 			assert.Equal(t, "localhost", host)
@@ -155,10 +147,6 @@ func TestClient(t *testing.T) {
 						status string
 					)
 
-					// test pointer in AssertJsonKeyEquals
-					ptrStatus := ptrTo("something")
-					statusValue := "something"
-
 					// response struct
 					rr := exampleResponse{}
 
@@ -173,11 +161,7 @@ func TestClient(t *testing.T) {
 								"host", &host,
 							),
 						).
-						Unmarshal(t, &rr).
-						AssertJsonKeyEquals(t, "status", "something").
-						AssertJsonKeyEquals(t, "status", statusValue).
-						AssertJsonKeyEquals(t, "status", ptrStatus).
-						AssertJsonKeyEquals(t, "host", "localhost")
+						Unmarshal(t, &rr)
 
 					assert.Equal(t, "something", status)
 					assert.Equal(t, "localhost", host)

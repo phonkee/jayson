@@ -28,6 +28,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -46,9 +47,14 @@ type Deps struct {
 }
 
 // Validate deps
-func (d *Deps) Validate(ass *require.Assertions) {
+func (d *Deps) Validate(t require.TestingT) {
 	// clean address
-	d.Address = strings.TrimSpace(d.Address)
+	if d.Address = strings.TrimSpace(d.Address); d.Address != "" {
+		// parse url here
+		if parsed, err := url.Parse(d.Address); err == nil {
+			d.Address = parsed.Host
+		}
+	}
 	// check if exampleHandler or Address is provided
-	ass.Falsef(d.Handler == nil && d.Address == "", "exampleHandler or Address is required")
+	require.Falsef(t, d.Handler == nil && d.Address == "", "exampleHandler or Address is required")
 }

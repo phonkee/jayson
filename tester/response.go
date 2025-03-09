@@ -165,8 +165,11 @@ main:
 		case "__lte__":
 			op = operationLte
 			break main
+		case "__eq__":
+			op = operationEquals
+			break main
 		default:
-			// pass
+			// mama says I'm special (but I'm not)
 		}
 
 		// try to parse the part as a number so we know we need to unmarshal array

@@ -29,46 +29,35 @@ import (
 	"github.com/phonkee/jayson/tester/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"net/http"
-	"strings"
 	"testing"
 )
 
-func TestDeps_Validate(t *testing.T) {
-	t.Run("valid", func(t *testing.T) {
-		for _, item := range []struct {
-			deps *tester.Deps
-		}{
-			{&tester.Deps{Handler: http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}), Address: ""}},
-			{&tester.Deps{Handler: nil, Address: "localhost:8080"}},
-		} {
-			//m := mocks.NewTestingT(t)
-			// TODO:
-			item.deps.Validate(nil)
-		}
+func TestNewGorillaResolver(t *testing.T) {
+	t.Run("test invalid router", func(t *testing.T) {
+		m := mocks.NewTestingT(t)
+		m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains("resolver: Router is nil"))).Once()
+		m.On("FailNow").Once()
+
+		tester.NewGorillaResolver(m, nil)
 	})
 
-	t.Run("url as address", func(t *testing.T) {
-		deps := &tester.Deps{Address: "http://localhost:8080"}
-		deps.Validate(t)
-		assert.Equal(t, "localhost:8080", deps.Address)
+	t.Run("test valid router", func(t *testing.T) {
+		m := mocks.NewTestingT(t)
+		router := newHealthRouter(m)
+		resolver := tester.NewGorillaResolver(m, router)
+		assert.NotNil(t, resolver)
+	})
+}
+
+func TestGorillaResolver_ReverseURL(t *testing.T) {
+
+	t.Run("test simple url", func(t *testing.T) {
+		router := newHealthRouter(t)
+		m := mocks.NewTestingT(t)
+		resolver := tester.NewGorillaResolver(m, router)
+		assert.NotNil(t, resolver)
+		url := resolver.ReverseURL(t, "api:v1:health")
+		assert.Equal(t, "/api/v1/health", url)
 	})
 
-	t.Run("invalid", func(t *testing.T) {
-		for _, item := range []struct {
-			deps *tester.Deps
-		}{
-			{&tester.Deps{Address: ""}},
-		} {
-			m := mocks.NewTestingT(t)
-			m.On("Errorf", mock.Anything, mock.MatchedBy(func(msg string) bool {
-				return strings.Contains(msg, "exampleHandler or Address is required")
-			})).Once()
-			m.On("FailNow").Once()
-			item.deps.Validate(m)
-			m.AssertExpectations(t)
-			m.AssertNumberOfCalls(t, "Errorf", 1)
-			m.AssertNumberOfCalls(t, "FailNow", 1)
-		}
-	})
 }

@@ -25,7 +25,6 @@
 package tester
 
 import (
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/url"
@@ -36,8 +35,6 @@ import (
 // Router is optional, if not provided, ReverseURL will not work
 // One of Handler or Address is required
 type Deps struct {
-	// Router - currently required
-	Router *mux.Router
 	// Handler is the http.Handler
 	Handler http.Handler
 	// Addr is the address of the server

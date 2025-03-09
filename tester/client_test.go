@@ -63,7 +63,7 @@ func matchByStringContains(s string) func(in string) bool {
 	}
 }
 
-func newHealthRouter(t *testing.T) *mux.Router {
+func newHealthRouter(t require.TestingT) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc("/api/v1/health", exampleHandler).Methods(http.MethodGet).Name("api:v1:health")
 	return router
@@ -78,8 +78,8 @@ func TestClient(t *testing.T) {
 	t.Run("test handler", func(t *testing.T) {
 		router := newHealthRouter(t)
 		tester.WithAPI(t, &tester.Deps{
-			Router:  router,
-			Handler: router,
+			Resolver: tester.NewGorillaResolver(t, router),
+			Handler:  router,
 		}, func(api tester.APIClient) {
 			// context first
 			ctx := context.Background()
@@ -117,8 +117,8 @@ func TestClient(t *testing.T) {
 		t.Run("test error", func(t *testing.T) {
 			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
 				tester.WithAPI(t, &tester.Deps{
-					Router:  router,
-					Address: address,
+					Resolver: tester.NewGorillaResolver(t, router),
+					Address:  address,
 				}, func(api tester.APIClient) {
 					// context first
 					ctx, cf := context.WithTimeout(context.Background(), time.Second*2)
@@ -135,8 +135,8 @@ func TestClient(t *testing.T) {
 		t.Run("test success", func(t *testing.T) {
 			tester.WithHttpServer(t, router, func(t *testing.T, address string) {
 				tester.WithAPI(t, &tester.Deps{
-					Router:  router,
-					Address: address,
+					Resolver: tester.NewGorillaResolver(t, router),
+					Address:  address,
 				}, func(api tester.APIClient) {
 					// context first
 					ctx, cf := context.WithTimeout(context.Background(), time.Second*2)
@@ -238,8 +238,8 @@ func TestClient_ReverseURL(t *testing.T) {
 	t.Run("test missing route", func(t *testing.T) {
 		router := mux.NewRouter()
 		tester.WithAPI(t, &tester.Deps{
-			Router:  router,
-			Handler: http.HandlerFunc(exampleHandler),
+			Resolver: tester.NewGorillaResolver(t, router),
+			Handler:  http.HandlerFunc(exampleHandler),
 		}, func(api tester.APIClient) {
 			m := mocks.NewTestingT(t)
 			m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains("route `api:v1:health` not found")))
@@ -248,7 +248,6 @@ func TestClient_ReverseURL(t *testing.T) {
 			})
 			api.ReverseURL(m, "api:v1:health")
 		})
-
 	})
 
 }

@@ -30,25 +30,6 @@ import (
 	"net/url"
 )
 
-// Resolver is an interface that can be used to resolve URLs
-// from the given name and extra arguments
-//
-//go:generate mockery --name Resolver --filename resolver.go
-type Resolver interface {
-	// ReverseURL returns a URL by given name and extra arguments
-	ReverseURL(t require.TestingT, name string, extra ...ResolverExtra) string
-}
-
-// ResolverExtra is an interface that can be used to pass additional information to the url resolver
-//
-//go:generate mockery --name ResolverExtra --filename resolver_extra.go
-type ResolverExtra interface {
-	// Args returns a list of additional arguments that can be used to resolve the URL
-	Args() []string
-	// Query returns a list of additional query parameters that can be used to resolve the URL
-	Query() url.Values
-}
-
 // ResolverArgs adds arguments to the resolver
 func ResolverArgs(t require.TestingT, args ...string) ResolverExtra {
 	return resolverExtra(func() []string { return args }, nil)

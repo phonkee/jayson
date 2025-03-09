@@ -161,17 +161,16 @@ main:
 
 	// prepare value
 	target := val.Interface()
-	assert.NoError(t, json.NewDecoder(bytes.NewBuffer(raw)).Decode(target))
+	assert.NoErrorf(t, json.NewDecoder(bytes.NewBuffer(raw)).Decode(target), "failed to unmarshal value: %v", raw)
 
 	// when not pointer, we need to get the value
 	if typ.Kind() != reflect.Ptr {
 		target = val.Elem().Interface()
 	}
 
-	// we should check json.RawMessage
-	// in that case we need to call JSONEq
+	// in case of json.RawMessage we call JSONEqf so it's compared as string in the correct order
 	if typ == jsonRawMessageType {
-		require.JSONEq(t, string(what.(json.RawMessage)), string(target.(json.RawMessage)))
+		require.JSONEqf(t, string(what.(json.RawMessage)), string(target.(json.RawMessage)), "expected: %v, got: %v", what, target)
 		return r
 	}
 

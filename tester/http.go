@@ -87,16 +87,13 @@ func WithHttpServer(t *testing.T, ctx context.Context, handler http.Handler, fn 
 		}, "closure should not panic")
 	})
 
-	// fast shutdown
+	// fast shutdown (1 second)
 	ctx, cancelTimeout := context.WithTimeout(context.Background(), time.Second)
 	defer cancelTimeout()
 
 	// shutdown server with timeout
-	shutdownErr := srv.Shutdown(ctx)
-
-	// shutdown server immediately
-	if shutdownErr != nil {
-		// bye bye
+	if err := srv.Shutdown(ctx); err != nil {
+		// shutdown server immediately
 		_ = srv.Close()
 	}
 }

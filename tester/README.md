@@ -1,12 +1,12 @@
 # tester
 
 Simple testing package for restful APIs.
-Uses mux router for routing and direct http.Handler for handling requests.
 
 # Usage
 
 Tester provides a simple way to test restful APIs. It is based on the `testing` package and provides a simple way to test APIs.
 You need to call `WithAPI` function with dependencies and then you provide closure where API will be available.
+This library supports http.Handler testing as well as http server testing (Address).
 
 
 ```go
@@ -31,9 +31,9 @@ type HealthResponse struct {
     Status string `json:"status"`
 }
 
-func TestHealthHandler(t *testing.T) {// 
+func TestHealthHandler(t *testing.T) { 
     tester.WithAPI(t, &Deps{
-        Resolver: resolver.NewGorillaMuxResolver(t, router),
+        Resolver: resolver.NewGorillaMuxResolver(t, router), // url resolver for gorilla mux
         Handler: router,
     }, func(api *API) {
         var status string
@@ -133,7 +133,7 @@ It not just asserts that path exists but also that value is equal to provided va
 On top of that there are ways to assert that value is not only equal but also greater, less, etc.
 Path can contain also array indexes.
 Let's see some examples.
-Let's suppose the api returns following json object.
+Let's suppose the api returns following json object for `/api/v1/users` endpoint.
 
 ```json
 {

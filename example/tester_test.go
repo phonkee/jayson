@@ -96,7 +96,6 @@ func TestTester(t *testing.T) {
 			// test UnmarshalObjectKeys
 			assert.Equal(t, userObj.ID, 1)
 			assert.Equal(t, userObj.Name, "John Doe")
-
 		})
 	})
 }

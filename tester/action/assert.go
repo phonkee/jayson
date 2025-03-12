@@ -41,7 +41,7 @@ func AssertEquals(value any) Action {
 		},
 		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
 			if err != nil {
-				return fmt.Errorf("%w: %s", ErrActionAssertEquals, err)
+				return err
 			}
 			if !assert.ObjectsAreEqual(v, value) {
 				return fmt.Errorf("%w, expected: %#v, got: %#v", ErrActionAssertEquals, value, v)
@@ -59,7 +59,7 @@ func AssertExists() Action {
 	return &actionFunc{
 		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
 			if err != nil {
-				return fmt.Errorf("%w: %s", ErrActionAssertExists, err)
+				return err
 			}
 			if raw == nil {
 				return fmt.Errorf("%w: expected value to exist, but it does not", ErrActionAssertExists)
@@ -167,7 +167,7 @@ func AssertNotExists() Action {
 	return &actionFunc{
 		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
 			if err != nil {
-				return nil
+				return err
 			}
 			if raw != nil {
 				return fmt.Errorf("%w: expected value to not exist, but it does", ErrActionAssertNotExists)
@@ -231,7 +231,7 @@ func AssertGt[T constraints.Integer](value T) Action {
 			if err != nil {
 				return err
 			}
-			if !assert.Greaterf(&requireTestingT{}, v, value, "expected %v to be greater than %v", v, value) {
+			if !assert.Greater(&requireTestingT{}, v, value) {
 				return fmt.Errorf("%w: expected %v to be greater than %v", ErrActionAssertGt, value, v)
 			}
 			return nil
@@ -252,7 +252,7 @@ func AssertGte[T constraints.Integer](value T) Action {
 				return err
 			}
 
-			if !assert.GreaterOrEqualf(&requireTestingT{}, v, value, "expected %v to be greater than or equal to %v", v, value) {
+			if !assert.GreaterOrEqual(&requireTestingT{}, v, value) {
 				return fmt.Errorf("%w: expected %v to be greater than or equal to %v", ErrActionAssertGte, v, value)
 			}
 			return nil
@@ -272,7 +272,7 @@ func AssertLt[T constraints.Integer](value T) Action {
 			if err != nil {
 				return err
 			}
-			if !assert.Lessf(&requireTestingT{}, v, value, "expected %v to be less than %v", v, value) {
+			if !assert.Less(&requireTestingT{}, v, value) {
 				return fmt.Errorf("%w: expected %v to be less than %v", ErrActionAssertLt, v, value)
 			}
 			return nil
@@ -292,7 +292,7 @@ func AssertLte[T constraints.Integer](value T) Action {
 			if err != nil {
 				return err
 			}
-			if !assert.LessOrEqualf(&requireTestingT{}, v, value, "expected %v to be less than or equal to %v", v, value) {
+			if !assert.LessOrEqual(&requireTestingT{}, v, value) {
 				return fmt.Errorf("%w: expected %v to be less than or equal to %v", ErrActionAssertLte, v, value)
 
 			}

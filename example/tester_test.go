@@ -64,7 +64,6 @@ func TestTester(t *testing.T) {
 				Status(t, action.AssertEquals(http.StatusOK)).
 				Json(t, "users.0.name", action.AssertNotEquals("Johnson Doe")).
 				Json(t, "users.0.name", action.AssertEquals("John Doe")).
-				Json(t, "users.0.name", action.AssertEquals("John Doe")).
 				Json(t, "users.0", action.AssertEquals(json.RawMessage(`{"id":1,"name":"John Doe"}`))).
 				Json(t, "users.0.name", action.AssertIn("John Doe", "Peter Vrba")).
 				Json(t, "users.0.name", action.AssertNotIn("Johnson Doe", "Peter Vrba")).

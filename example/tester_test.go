@@ -33,6 +33,7 @@ import (
 	"github.com/phonkee/jayson/tester/resolver"
 	"github.com/stretchr/testify/assert"
 	"net/http"
+	"regexp"
 	"testing"
 )
 
@@ -89,7 +90,8 @@ func TestTester(t *testing.T) {
 					action.AssertGte(0),
 					action.AssertLte(0),
 					action.AssertNotExists(),
-				))
+				)).
+				Json(t, "users.0.id", action.AssertRegex(regexp.MustCompile(`\d+`)))
 
 			// test Unmarshal
 			assert.Equal(t, user.ID, 1)

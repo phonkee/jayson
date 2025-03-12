@@ -296,11 +296,11 @@ func AssertRegex(pattern *regexp.Regexp, count ...int) Action {
 			if len(count) > 0 {
 				matches := pattern.FindAllSubmatch(raw, -1)
 				if len(matches) != count[0] {
-					return fmt.Errorf("expected %d matches, got %d", count[0], len(matches))
+					return fmt.Errorf("expected %d matches, got %d for regex: %#v", count[0], len(matches), pattern.String())
 				}
 			} else {
 				if !pattern.Match(raw) {
-					return fmt.Errorf("expected %s to match %s", raw, pattern)
+					return fmt.Errorf("expected %s to match regex: %#v", raw, pattern.String())
 				}
 			}
 			return nil

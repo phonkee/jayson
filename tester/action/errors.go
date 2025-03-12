@@ -60,6 +60,7 @@ var (
 	ErrActionAssertLte           = newErrAction("AssertLte")
 	ErrActionAssertAll           = newErrAction("AssertAll")
 	ErrActionAssertAny           = newErrAction("AssertAny")
+	ErrActionAssertRegex         = newErrAction("AssertRegex")
 	ErrActionUnmarshal           = newErrAction("Unmarshal")
 	ErrActionUnmarshalObjectKeys = newErrAction("UnmarshalObjectKeys")
 )

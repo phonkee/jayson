@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/constraints"
+	"regexp"
 	"sort"
 )
 
@@ -301,5 +302,30 @@ func AssertLte[T constraints.Integer](value T) Action {
 		},
 		support:   []Support{SupportJson, SupportStatus},
 		baseError: ErrActionAssertLte,
+	}
+}
+
+// AssertRegex asserts that given value matches the regex in the response
+// if count provided it will check for the number of matches, otherwise it will check if the value matches the regex
+func AssertRegex(pattern *regexp.Regexp, count ...int) Action {
+	return &actionFunc{
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			if len(count) > 0 {
+				matches := pattern.FindAllSubmatch(raw, -1)
+				if len(matches) != count[0] {
+					return fmt.Errorf("expected %d matches, got %d", count[0], len(matches))
+				}
+			} else {
+				if !pattern.Match(raw) {
+					return fmt.Errorf("expected %s to match %s", raw, pattern)
+				}
+			}
+			return nil
+		},
+		support:   []Support{SupportHeader, SupportJson, SupportStatus},
+		baseError: ErrActionAssertRegex,
 	}
 }

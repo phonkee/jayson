@@ -91,7 +91,9 @@ func TestTester(t *testing.T) {
 					action.AssertLte(0),
 					action.AssertNotExists(),
 				)).
-				Json(t, "users.0.id", action.AssertRegex(regexp.MustCompile(`\d+`)))
+				Json(t, "users.0.id", action.AssertRegex(
+					regexp.MustCompile(`\d+`),
+				))
 
 			// test Unmarshal
 			assert.Equal(t, user.ID, 1)

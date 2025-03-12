@@ -101,7 +101,7 @@ func TestRequest_Query(t *testing.T) {
 			for key, value := range item.query {
 				r.Query(t, key, value)
 			}
-			r.Do(t, context.Background()).AssertStatus(t, http.StatusOK)
+			r.Do(t, context.Background()).Status(t, http.StatusOK)
 		})
 	}
 }

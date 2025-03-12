@@ -12,92 +12,101 @@ This library supports http.Handler testing as well as http server testing (Addre
 package example_test
 
 import (
+	"context"
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"github.com/phonkee/jayson/tester"
+	"github.com/phonkee/jayson/tester/action"
 	"github.com/phonkee/jayson/tester/resolver"
+	"net/http"
+	"testing"
 )
 
 var (
-    // we will use gorilla mux router
-    router = mux.NewRouter()
+	// we will use gorilla mux router
+	router = mux.NewRouter()
 )
 
 func init() {
-    // create a health check endpoint
-    router.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
-        w.WriteHeader(http.StatusOK)
-        if err := json.NewEncoder(w).Encode(HealthResponse{
-            Status: "ok",
-        }); err != nil {
-            panic(err)
-        }
-    }).Methods(http.MethodGet).Name("api:v1:health")
+	// create a health check endpoint
+	router.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(HealthResponse{
+			StatusDatabase: "ok",
+		}); err != nil {
+			panic(err)
+		}
+	}).Methods(http.MethodGet).Name("api:v1:health")
 }
 
 // HealthResponse is a simple response struct that returns status
 type HealthResponse struct {
-    Status string `json:"status"`
+	StatusDatabase string `json:"status_db"`
 }
 
-func TestHealthHandler(t *testing.T) { 
-    tester.WithAPI(t, &Deps{
-        Resolver: resolver.NewGorillaMuxResolver(t, router), // url resolver for gorilla mux
-        Handler: router, // use router as http.Handler
-    }, func(api *API) {
-        var status string
-        
-        // unmarshal key from json object to value
-        api.Get(t, api.ReverseURL(t, "api:v1:health")).
-            Do(t, context.TODO()).
-            AssertStatus(t, http.StatusOK).
-            Unmarshal(t, 
-                APIObject(t, "status", &status), // APIObject deconstructs json object to value given key value pairs
-            )
-        assert.Equal(t, "ok", status)
+func TestHealthHandler(t *testing.T) {
+	tester.WithAPI(t, &Deps{
+		Resolver: resolver.NewGorillaMuxResolver(t, router), // url resolver for gorilla mux
+		Handler:  router,                                    // use router as http.Handler
+	}, func(api *API) {
+		var status string
 
-        // direct unmarshal to struct
-        response := HealthResponse{}
-        api.Get(t, api.ReverseURL(t, "api:v1:health")).
-            Do(t, context.TODO()).
-            AssertStatus(t, http.StatusOK).
-            Unmarshal(t, &response)
+		// unmarshal key from json object to value
+		api.Get(t, api.ReverseURL(t, "api:v1:health")).
+			Do(t, context.TODO()).
+			Status(t, action.Unmarshal(&status)).
+			//Unmarshal(t,
+			//	APIObject(t, "status", &status), // APIObject deconstructs json object to value given key value pairs
+			//)
+			assert.Equal(t, "ok", status)
 
-        // assert json equals
-        api.Get(t, api.ReverseURL(t, "api:v1:health")).
-            Do(t, context.TODO()).
-            AssertStatus(t, http.StatusOK).
-            AssertJsonEquals(t, HealthResponse{
-                Status: "ok",	
-            })
-		
-        // assert object key
-        api.Get(t, api.ReverseURL(t, "api:v1:health")).
-            Do(t, context.TODO()).
-            AssertStatus(t, http.StatusOK).
-            AssertJsonKeyEquals(t, "status", "ok")
-    })
+		// direct unmarshal to struct
+		response := HealthResponse{}
+		api.Get(t, api.ReverseURL(t, "api:v1:health")).
+			Do(t, context.TODO()).
+			Status(t, action.AssertEqual(http.StatusOK)).
+			Json(t, "", action.Unmarshal(&response))
+
+		// assert json equals
+		api.Get(t, api.ReverseURL(t, "api:v1:health")).
+			Do(t, context.TODO()).
+			Status(t, action.AssertEqual(http.StatusOK)).
+			Json(t, "", action.AssertEqual(HealthResponse{
+				StatusDatabase: "ok",
+			}))
+
+		// assert object key
+		api.Get(t, api.ReverseURL(t, "api:v1:health")).
+			Do(t, context.TODO()).
+			Status(t, action.AssertEqual(http.StatusOK)).
+			Json(t, "status_db", action.AssertEqual("ok"))
+	})
 }
+
 ```
 
-# Assertions
+# Response
+
+# TODO
+
 
 Tester library provides a set of assertions that can be used to test APIs.
 Some are basic, some are more complex. Let's go through them.
 Let's assume that we have instance of APIClient `api` that is used to make requests.
 
-## AssertStatus
+## Status
 
 Asserts that response status code is equal to provided status code.
 
 ```go
 api.Get(t, "/api/v1/health").
     Do(t, context.TODO()).
-    AssertStatus(t, http.StatusOK)
+    Status(t, http.StatusOK)
 ```
 
 ## AssertHeaderValue
 
-Asserts that response header value is equal to provided value.
+Asserts that response header into is equal to provided into.
 
 ```go
 api.Get(t, "/api/v1/health").
@@ -129,15 +138,15 @@ Unmarshal is not assertion but it is used to unmarshal response body to provided
 var response HealthResponse
 api.Get(t, "/api/v1/health").
     Do(t, context.TODO()).
-    AssertStatus(t, http.StatusOK).
+    Status(t, http.StatusOK).
     Unmarshal(t, &response)
 ```
 
 ## AssertJsonPath
 
 This assertion is the most complex one. It is used to assert json path in response body.
-It not just asserts that path exists but also that value is equal to provided value.
-On top of that there are ways to assert that value is not only equal but also greater, less, etc.
+It not just asserts that path exists but also that into is equal to provided into.
+On top of that there are ways to assert that into is not only equal but also greater, less, etc.
 Path can contain also array indexes.
 Let's see some examples.
 Let's suppose the api returns following json object for `/api/v1/users` endpoint.

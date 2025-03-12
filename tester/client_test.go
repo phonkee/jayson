@@ -85,7 +85,7 @@ func TestClient(t *testing.T) {
 			// do response
 			api.Request(t, http.MethodGet, api.ReverseURL(t, "api:v1:health")).
 				Do(t, ctx).
-				AssertStatus(t, http.StatusOK).
+				Status(t, http.StatusOK).
 				AssertJsonEquals(t, `{"status": "something", "host": "localhost"}`).
 				Unmarshal(t,
 					tester.APIObject(t,
@@ -138,7 +138,7 @@ func TestClient(t *testing.T) {
 					// do response
 					api.Request(t, http.MethodGet, "/not/exist").
 						Do(t, ctx).
-						AssertStatus(t, http.StatusNotFound)
+						Status(t, http.StatusNotFound)
 				})
 			})
 		})
@@ -165,7 +165,7 @@ func TestClient(t *testing.T) {
 					// do response
 					api.Request(t, http.MethodGet, api.ReverseURL(t, "api:v1:health")).
 						Do(t, ctx).
-						AssertStatus(t, http.StatusOK).
+						Status(t, http.StatusOK).
 						AssertJsonEquals(t, `{"status": "something", "host": "localhost"}`).
 						AssertJsonPath(t, "status", "something").
 						AssertJsonPath(t, "__len__", 2).
@@ -197,7 +197,7 @@ func TestClient_MethodAliases(t *testing.T) {
 			resp := &http.Response{
 				StatusCode: http.StatusOK,
 			}
-			// expect round trip
+			// action round trip
 			rt.On("RoundTrip", mock.MatchedBy(func(r *http.Request) bool {
 				return r.Method == method
 			})).Return(resp, nil)

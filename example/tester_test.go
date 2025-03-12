@@ -26,9 +26,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/phonkee/jayson/tester"
+	"github.com/phonkee/jayson/tester/action"
 	"github.com/phonkee/jayson/tester/resolver"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 )
@@ -54,19 +57,39 @@ func TestTester(t *testing.T) {
 			Resolver: resolver.NewGorillaResolver(t, router),
 			Address:  address,
 		}, func(api tester.APIClient) {
+			user := User{}
+			userObj := User{}
 			api.Get(t, api.ReverseURL(t, "api:v1:users:list")).
 				Do(t, ctx).
-				AssertStatus(t, http.StatusOK).
-				//AssertJsonPath2(t, "users", tester.AssertExists(true)).
-				//AssertJsonPath2(t, "users", tester.AssertLen(1)).
-				//AssertJsonPath2(t, "users.0.id", tester.AssertGte(1)).
-				//AssertJsonPath2(t, "users.0.id", tester.AssertGt(0)).
-				//AssertJsonPath2(t, "users.0.id", tester.AssertLte(10)).
-				//AssertJsonPath2(t, "users.0.id", tester.AssertLt(10)).
-				//AssertJsonPath2(t, "users.0", json.RawMessage(`{"id":1,"name":"John Doe"}`)).
-				//AssertJsonPath2(t, "users.0.name", tester.AssertNotEqual("John Doe")).
-				AssertJsonPath2(t, "users.0.name", tester.AssertEqual("John Doe")).
-				AssertJsonPath2(t, "users.0.name", "John Doe")
+				Status(t, action.AssertEquals(http.StatusOK)).
+				Json(t, "users.0.name", action.AssertNotEquals("Johnson Doe")).
+				Json(t, "users.0.name", action.AssertEquals("John Doe")).
+				Json(t, "users.0.name", action.AssertEquals("John Doe")).
+				Json(t, "users.0", action.AssertEquals(json.RawMessage(`{"id":1,"name":"John Doe"}`))).
+				Json(t, "users.0.name", action.AssertIn("John Doe", "Peter Vrba")).
+				Json(t, "users.0.name", action.AssertNotIn("Johnson Doe", "Peter Vrba")).
+				Json(t, "users", action.AssertExists()).
+				Json(t, "user", action.AssertNotExists()).
+				Json(t, "users", action.AssertLen(1)).
+				Json(t, "users.0", action.AssertKeys("id", "name")).
+				Json(t, "users.0.id", action.AssertGte(1)).
+				Json(t, "users.0.id", action.AssertGt(0)).
+				Json(t, "users.0.id", action.AssertLt(2)).
+				Json(t, "users.0.id", action.AssertLte(1)).
+				Json(t, "users.0", action.Unmarshal(&user)).
+				Json(t, "users.0", action.UnmarshalObjectKeys(action.KV{
+					"id":   &userObj.ID,
+					"name": &userObj.Name,
+				}))
+
+			// test Unmarshal
+			assert.Equal(t, user.ID, 1)
+			assert.Equal(t, user.Name, "John Doe")
+
+			// test UnmarshalObjectKeys
+			assert.Equal(t, userObj.ID, 1)
+			assert.Equal(t, userObj.Name, "John Doe")
+
 		})
 	})
 }

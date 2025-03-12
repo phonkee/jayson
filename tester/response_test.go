@@ -27,6 +27,7 @@ package tester
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/phonkee/jayson/tester/action"
 	"github.com/phonkee/jayson/tester/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -149,91 +150,91 @@ func TestResponse_AssertJsonEquals(t *testing.T) {
 	}
 }
 
-func TestResponse_AssertJsonPath(t *testing.T) {
+func TestResponse_AssertJson(t *testing.T) {
 
 	t.Run("test valid path", func(t *testing.T) {
 		for _, item := range []struct {
-			name     string
-			body     string
-			path     string
-			expected any
+			name   string
+			body   string
+			path   string
+			action action.Action
 		}{
 			{
-				name:     "simple strings",
-				body:     `{"name": "John"}`,
-				path:     "name",
-				expected: "John",
+				name:   "simple strings",
+				body:   `{"name": "John"}`,
+				path:   "name",
+				action: action.AssertEquals("John"),
 			},
 			{
-				name:     "whole object as RawMessage",
-				body:     `{"name": "John"}`,
-				path:     ".",
-				expected: json.RawMessage(`{"name": "John"}`),
+				name:   "whole object as RawMessage",
+				body:   `{"name": "John"}`,
+				path:   ".",
+				action: action.AssertEquals(json.RawMessage(`{"name": "John"}`)),
 			},
 			{
-				name:     "simple strings to pointer",
-				body:     `{"name": "John"}`,
-				path:     "name",
-				expected: ptrTo("John"),
+				name:   "simple strings to pointer",
+				body:   `{"name": "John"}`,
+				path:   "name",
+				action: action.AssertEquals(ptrTo("John")),
 			},
 			{
-				name:     "test embedded struct strings",
-				body:     `{"other": {"name": "John"}}`,
-				path:     "other.name",
-				expected: "John",
+				name:   "test embedded struct strings",
+				body:   `{"other": {"name": "John"}}`,
+				path:   "other.name",
+				action: action.AssertEquals("John"),
 			},
 			{
-				name:     "test slice of objects to string",
-				body:     `{"other": [{"name": "John"}, {"name": "Doe"}]}`,
-				path:     "other.1.name",
-				expected: "Doe",
+				name:   "test slice of objects to string",
+				body:   `{"other": [{"name": "John"}, {"name": "Doe"}]}`,
+				path:   "other.1.name",
+				action: action.AssertEquals("Doe"),
 			},
 			{
-				name:     "test slice of objects to object",
-				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": "Doe"}}]}`,
-				path:     "other.2.object",
-				expected: testStruct{Value: "Doe"},
+				name:   "test slice of objects to object",
+				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": "Doe"}}]}`,
+				path:   "other.2.object",
+				action: action.AssertEquals(testStruct{Value: "Doe"}),
 			},
 			{
-				name:     "test slice of objects to pointer to object",
-				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": "Doe"}}]}`,
-				path:     "other.2.object",
-				expected: &testStruct{Value: "Doe"},
+				name:   "test slice of objects to pointer to object",
+				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": "Doe"}}]}`,
+				path:   "other.2.object",
+				action: action.AssertEquals(&testStruct{Value: "Doe"}),
 			},
 			{
-				name:     "test slice of objects to pointer to integer",
-				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42}}]}`,
-				path:     "other.2.object.value.__eq__",
-				expected: 42,
+				name:   "test slice of objects to pointer to integer",
+				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42}}]}`,
+				path:   "other.2.object.value.__eq__",
+				action: action.AssertEquals(42),
 			},
 			{
-				name:     "test slice of objects to pointer to integer (with dots)",
-				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42}}]}`,
-				path:     "other.2......object.value",
-				expected: ptrTo(42),
+				name:   "test slice of objects to pointer to integer (with dots)",
+				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42}}]}`,
+				path:   "other.2......object.value",
+				action: action.AssertEquals(ptrTo(42)),
 			},
 			{
-				name:     "test raw json",
-				body:     `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
-				path:     "other.2",
-				expected: json.RawMessage(`{"object": {"other": 12, "value": 42}}`),
+				name:   "test raw json",
+				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+				path:   "other.2",
+				action: action.AssertEquals(json.RawMessage(`{"object": {"other": 12, "value": 42}}`)),
 			},
 			{
 				name: "test raw json",
 				body: `{"other": [{"value": "John"}, {"value": "Doe"}, {"value": "Mark", "extra": "extra"}]}`,
 				path: "other",
-				expected: []testStruct{
+				action: action.AssertEquals([]testStruct{
 					{Value: "John"},
 					{Value: "Doe"},
 					{Value: "Mark"},
-				},
+				}),
 			},
 		} {
 			t.Run(item.name, func(t *testing.T) {
 				r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 				r.body = []byte(item.body)
 
-				r.AssertJsonPath(t, item.path, item.expected)
+				r.Json(t, item.path, item.action)
 			})
 		}
 	})
@@ -245,26 +246,26 @@ func TestResponse_AssertJsonPath(t *testing.T) {
 					name   string
 					body   string
 					path   string
-					expect any
+					action action.Action
 				}{
 					{
 						name:   "test len of array",
 						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
-						path:   "other.__len__",
-						expect: 3,
+						path:   "other",
+						action: action.AssertLen(3),
 					},
 					{
 						name:   "test len of array",
 						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
 						path:   "other.2.object.__len__",
-						expect: 2,
+						action: action.AssertLen(2),
 					},
 				} {
 					t.Run(item.name, func(t *testing.T) {
 						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 						r.body = []byte(item.body)
 
-						r.AssertJsonPath(t, item.path, item.expect)
+						r.Json(t, item.path, item.action)
 					})
 				}
 			})

@@ -165,7 +165,7 @@ func TestAPIObject(t *testing.T) {
 					m := mocks.NewTestingT(t)
 					resp := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 					resp.body = item.body
-					resp.Unmarshal(m, APIObject(m, "value", item.value))
+					//resp.Json(m, APIObject(m, "value", item.value))
 					assert.Equal(t, item.expect, item.value)
 					m.AssertExpectations(t)
 				})

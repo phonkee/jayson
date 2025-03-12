@@ -28,7 +28,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -67,17 +66,22 @@ func UnmarshalObjectKeys(keys KV) Action {
 
 			// unmarshal response to object
 			// TODO: finish this
-			assert.NoErrorf(t, json.NewDecoder(bytes.NewBuffer(raw)).Decode(&obj), "cannot unmarshal response to %T", obj)
+			if err = json.NewDecoder(bytes.NewBuffer(raw)).Decode(&obj); err != nil {
+				return fmt.Errorf("%w: cannot unmarshal response to %T", ErrActionUnmarshalObjectKeys, obj)
+			}
 
 			// iterate over all keys and unmarshal them to the given values
 			for key, val := range keys {
 				v, ok := obj[key]
-
-				// check if key exists in the response
-				assert.Truef(t, ok, "key %s not found in response", key)
+				if !ok {
+					// check if key exists in the response
+					return fmt.Errorf("%w: key %s not found in response", ErrActionUnmarshalObjectKeys, key)
+				}
 
 				// unmarshal the value to the given addressable value
-				assert.NoErrorf(t, json.NewDecoder(bytes.NewBuffer(v)).Decode(val), "cannot unmarshal response to %T", value)
+				if err = json.NewDecoder(bytes.NewBuffer(v)).Decode(val); err != nil {
+					return fmt.Errorf("%w: cannot unmarshal response to %T", ErrActionUnmarshalObjectKeys, val)
+				}
 			}
 
 			return nil

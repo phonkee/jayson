@@ -225,9 +225,7 @@ api.Get(t, "/api/v1/users").
 ```
 
 # TODO
-- [ ] AssertAny - any of given actions succeeds
-- [ ] AssertAll - all of given actions succeeds
-- [ ] AssertRegex - assert that response body (path) matches regex
+- [ ] AssertZero - assert zero value (0, "", nil, [], {}, false)
 
 # Author
 

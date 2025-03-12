@@ -83,19 +83,22 @@ func (r *response) Json(t require.TestingT, path string, a action.Action) APIRes
 
 main:
 	for _, part := range strings.Split(path, ".") {
+		if part == "" {
+			continue main
+		}
 		// try to parse the part as a number so we know we need to unmarshal array
 		if number, numberError := strconv.ParseUint(part, 10, 64); numberError == nil {
 			var arr []json.RawMessage
 
 			// try to unmarshal array
 			if err = json.Unmarshal(raw, &arr); err != nil {
-				err = fmt.Errorf("%w: path: %s", err, path)
+				err = fmt.Errorf("cannot unmarshal object into slice")
 				break main
 			}
 
 			// check if the number is in bounds
 			if int(number) >= len(arr) {
-				err = fmt.Errorf("%w: path: %s", err, path)
+				err = fmt.Errorf("out of bounds")
 				break main
 			}
 
@@ -107,13 +110,13 @@ main:
 
 		// try to unmarshal object, if it fails there is a problem
 		if err = json.Unmarshal(raw, &obj); err != nil {
-			err = fmt.Errorf("%w: path: %s", err, path)
+			err = fmt.Errorf("cannot unmarshal value")
 			break main
 		}
 
 		// check if object contains the part
 		if raw, ok = obj[part]; !ok {
-			err = fmt.Errorf("%w: path: %s", err, path)
+			err = fmt.Errorf("not present")
 			break main
 		}
 	}
@@ -121,10 +124,12 @@ main:
 	// context instance
 	ctx := context.WithValue(context.Background(), action.ContextKeyUnmarshalActionValue, r.unmarshalActionValue)
 
-	// now we should check for
+	var value any
 
-	// unmarshal value
-	value, err := r.unmarshalActionValue(t, raw, a)
+	// if we don't have any error, we can try to unmarshal the value
+	if err == nil {
+		value, err = r.unmarshalActionValue(t, raw, a)
+	}
 
 	// check if unmarshal was not applied
 	if errors.Is(err, action.ErrActionNotApplied) {
@@ -165,7 +170,7 @@ func (r *response) Status(t require.TestingT, a action.Action) APIResponse {
 	return r
 }
 
-// unmarshal given message into new value of given type
+// unmarshal given message action new value of given type
 func (r *response) unmarshalActionValue(t require.TestingT, raw json.RawMessage, a action.Action) (any, error) {
 	// check if we have value provided
 	if v, ok := a.Value(t); ok {
@@ -185,7 +190,9 @@ func (r *response) unmarshalActionValue(t require.TestingT, raw json.RawMessage,
 			return nil, fmt.Errorf("%w: %s", action.ErrUnmarshal, err)
 		}
 
-		value = reflect.ValueOf(value).Elem().Interface()
+		if typ.Kind() != reflect.Ptr {
+			value = reflect.ValueOf(value).Elem().Interface()
+		}
 
 		return value, nil
 	}

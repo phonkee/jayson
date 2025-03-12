@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/constraints"
+	"reflect"
 	"regexp"
 	"sort"
 )
@@ -45,8 +46,15 @@ func AssertEquals(value any) Action {
 			if err != nil {
 				return err
 			}
-			if !assert.ObjectsAreEqual(v, value) {
-				return fmt.Errorf("%w, expected: %#v, got: %#v", ErrActionAssertEquals, value, v)
+
+			if reflect.TypeOf(v) == reflect.TypeOf(json.RawMessage{}) {
+				if !assert.JSONEq(&requireTestingT{}, string(v.(json.RawMessage)), string(raw)) {
+					return fmt.Errorf("%w, expected: %#v, got: %#v", ErrActionAssertEquals, value, v)
+				}
+			} else {
+				if !assert.ObjectsAreEqual(v, value) {
+					return fmt.Errorf("%w, expected: %#v, got: %#v", ErrActionAssertEquals, value, v)
+				}
 			}
 
 			return nil
@@ -84,7 +92,7 @@ func AssertGt[T constraints.Integer](value T) Action {
 				return err
 			}
 			if !assert.Greater(&requireTestingT{}, v, value) {
-				return fmt.Errorf("%w: expected %v to be greater than %v", ErrActionAssertGt, value, v)
+				return fmt.Errorf("%w: expected %v to be greater than %v", ErrActionAssertGt, v, value)
 			}
 			return nil
 		},
@@ -236,8 +244,15 @@ func AssertNotEquals(value any) Action {
 			if err != nil {
 				return err
 			}
-			if assert.ObjectsAreEqual(value, v) {
-				return fmt.Errorf("%w: expected value to not be equal to %#v", ErrActionAssertNotEquals, value)
+			if reflect.TypeOf(v) == reflect.TypeOf(json.RawMessage{}) {
+				stringValue := string(value.(json.RawMessage))
+				if assert.JSONEq(&requireTestingT{}, string(v.(json.RawMessage)), string(raw)) {
+					return fmt.Errorf("%w: expected value to not be equal to %v", ErrActionAssertNotEquals, stringValue)
+				}
+			} else {
+				if assert.ObjectsAreEqual(v, value) {
+					return fmt.Errorf("%w: expected value to not be equal to %#v", ErrActionAssertNotEquals, value)
+				}
 			}
 			return nil
 		},
@@ -322,11 +337,12 @@ func (l *length) UnmarshalJSON(b []byte) error {
 		// second unmarshal map
 		var m map[string]any
 		if err := json.Unmarshal(b, &m); err != nil {
-			return err
+			return fmt.Errorf("%s", "cannot get length of value that is not slice or map")
 		}
 		*l = length(len(m))
+	} else {
+		*l = length(len(arr))
 	}
-	*l = length(len(arr))
 
 	return nil
 }

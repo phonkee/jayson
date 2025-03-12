@@ -25,6 +25,7 @@
 package action
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/constraints"
@@ -46,8 +47,18 @@ type Number interface {
 // Action is an action that can be performed on the response. It has currently 2 meanings: Assertion and Unmarshal.
 // TODO: add path or id to run so we can print better error messages?
 type Action interface {
-	Run(t require.TestingT, value any, raw json.RawMessage, err error) error
+	Run(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error
 	Value(t require.TestingT) (any, bool)
 	Supports(support Support) bool
 	BaseError() error
 }
+
+type contextKey int
+
+const (
+	// ContextKeyUnmarshalActionValue is a context key for the unmarshal action value.
+	ContextKeyUnmarshalActionValue contextKey = iota
+)
+
+// unmarshalActionValueFunc is a function that unmarshal the action value from the response.
+type unmarshalActionValueFunc = func(t require.TestingT, raw json.RawMessage, a Action) (any, error)

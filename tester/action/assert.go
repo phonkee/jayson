@@ -25,6 +25,7 @@
 package action
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +40,7 @@ func AssertEquals(value any) Action {
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
 		},
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -57,7 +58,7 @@ func AssertEquals(value any) Action {
 // AssertExists asserts that the value exists in the response based on given argument
 func AssertExists() Action {
 	return &actionFunc{
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -77,7 +78,7 @@ func AssertIn[T any](values ...T) Action {
 		value: func(t require.TestingT) (any, bool) {
 			return values[0], true
 		},
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -99,7 +100,7 @@ func AssertKeys(keys ...string) Action {
 		value: func(t require.TestingT) (any, bool) {
 			return map[string]any{}, true
 		},
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -128,7 +129,7 @@ func AssertLen[T constraints.Integer](l T) Action {
 		value: func(t require.TestingT) (any, bool) {
 			return length(0), true
 		},
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -148,7 +149,7 @@ func AssertNotEquals(value any) Action {
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
 		},
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -165,7 +166,7 @@ func AssertNotEquals(value any) Action {
 // AssertNotExists asserts that the value does not exist in the response based on given argument
 func AssertNotExists() Action {
 	return &actionFunc{
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -185,7 +186,7 @@ func AssertNotIn[T any](values ...T) Action {
 		value: func(t require.TestingT) (any, bool) {
 			return values[0], true
 		},
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -227,7 +228,7 @@ func AssertGt[T constraints.Integer](value T) Action {
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
 		},
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -247,7 +248,7 @@ func AssertGte[T constraints.Integer](value T) Action {
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
 		},
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -268,7 +269,7 @@ func AssertLt[T constraints.Integer](value T) Action {
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
 		},
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -288,7 +289,7 @@ func AssertLte[T constraints.Integer](value T) Action {
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
 		},
-		run: func(t require.TestingT, v any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}

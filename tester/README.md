@@ -224,6 +224,11 @@ api.Get(t, "/api/v1/users").
     AssertJsonPath(t, "data.users.0.name.__neq__", "John")
 ```
 
+# TODO
+- [ ] AssertAny - any of given actions succeeds
+- [ ] AssertAll - all of given actions succeeds
+- [ ] AssertRegex - assert that response body (path) matches regex
+
 # Author
 
 Peter Vrba <phonkee@phonkee.eu>

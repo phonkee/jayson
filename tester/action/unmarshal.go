@@ -26,6 +26,7 @@ package action
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ import (
 // Unmarshal action unmarshal the given json response to the given value
 func Unmarshal(into any) Action {
 	return &actionFunc{
-		run: func(t require.TestingT, value any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
@@ -56,7 +57,7 @@ type KV map[string]any
 // kv should be pairs of string key and addressable value
 func UnmarshalObjectKeys(keys KV) Action {
 	return &actionFunc{
-		run: func(t require.TestingT, value any, raw json.RawMessage, err error) error {
+		run: func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}

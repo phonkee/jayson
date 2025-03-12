@@ -25,13 +25,14 @@
 package action
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/require"
 )
 
 // actionFunc is a helper to create actions from functions
 type actionFunc struct {
-	run       func(t require.TestingT, value any, raw json.RawMessage, err error) error
+	run       func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error
 	value     func(t require.TestingT) (any, bool)
 	support   []Support
 	baseError error
@@ -57,9 +58,9 @@ func (a *actionFunc) Value(t require.TestingT) (any, bool) {
 	return nil, false
 }
 
-func (a *actionFunc) Run(t require.TestingT, value any, raw json.RawMessage, err error) error {
+func (a *actionFunc) Run(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
 	if a.run != nil {
-		return a.run(t, value, raw, err)
+		return a.run(t, ctx, value, raw, err)
 	}
 	return err
 }

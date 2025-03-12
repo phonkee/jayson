@@ -26,6 +26,7 @@ package tester
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -55,6 +56,7 @@ type response struct {
 }
 
 // Header runs action against given header key
+// TODO: implement
 func (r *response) Header(t require.TestingT, key string, a action.Action) APIResponse {
 	assert.Truef(t, a.Supports(action.SupportHeader), "action %v is not supported in Header call", a)
 
@@ -116,6 +118,11 @@ main:
 		}
 	}
 
+	// context instance
+	ctx := context.WithValue(context.Background(), action.ContextKeyUnmarshalActionValue, r.unmarshalActionValue)
+
+	// now we should check for
+
 	// unmarshal value
 	value, err := r.unmarshalActionValue(t, raw, a)
 
@@ -125,7 +132,7 @@ main:
 	}
 
 	// now run action
-	if err := a.Run(t, value, raw, err); err != nil {
+	if err := a.Run(t, ctx, value, raw, err); err != nil {
 		require.Fail(t, fmt.Sprintf("FAILED: `response.Json`, path: `%s`, %v", path, err.Error()))
 	}
 
@@ -147,8 +154,11 @@ func (r *response) Status(t require.TestingT, a action.Action) APIResponse {
 		err = nil
 	}
 
+	// context instance
+	ctx := context.WithValue(context.Background(), action.ContextKeyUnmarshalActionValue, r.unmarshalActionValue)
+
 	// now call a.Run
-	if err := a.Run(t, value, raw, err); err != nil {
+	if err := a.Run(t, ctx, value, raw, err); err != nil {
 		require.NoError(t, err)
 	}
 

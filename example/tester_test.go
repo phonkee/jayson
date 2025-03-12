@@ -77,10 +77,6 @@ func TestTester(t *testing.T) {
 				Json(t, "users.0.id", action.AssertLt(2)).
 				Json(t, "users.0.id", action.AssertLte(1)).
 				Json(t, "users.0", action.Unmarshal(&user)).
-				Json(t, "users.0", action.UnmarshalObjectKeys(action.KV{
-					"id":   &userObj.ID,
-					"name": &userObj.Name,
-				})).
 				Json(t, "users.0.id", action.AssertAll(
 					action.AssertGte(0),
 					action.AssertLte(1),
@@ -93,7 +89,11 @@ func TestTester(t *testing.T) {
 				)).
 				Json(t, "users.0.id", action.AssertRegex(
 					regexp.MustCompile(`\d+`),
-				))
+				)).
+				Json(t, "users.0", action.UnmarshalObjectKeys(action.KV{
+					"id":   &userObj.ID,
+					"name": &userObj.Name,
+				}))
 
 			// test Unmarshal
 			assert.Equal(t, user.ID, 1)

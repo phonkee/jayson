@@ -83,10 +83,12 @@ func TestTester(t *testing.T) {
 				Json(t, "users.0.id", action.AssertAll(
 					action.AssertGte(0),
 					action.AssertLte(1),
+					action.AssertExists(),
 				)).
 				Json(t, "users.0.id", action.AssertAny(
 					action.AssertGte(0),
 					action.AssertLte(0),
+					action.AssertNotExists(),
 				))
 
 			// test Unmarshal

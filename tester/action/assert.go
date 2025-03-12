@@ -73,6 +73,47 @@ func AssertExists() Action {
 	}
 }
 
+// AssertGt asserts that given value is greater than the value in the response
+func AssertGt[T constraints.Integer](value T) Action {
+	return &actionFunc{
+		value: func(t require.TestingT) (any, bool) {
+			return value, true
+		},
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			if !assert.Greater(&requireTestingT{}, v, value) {
+				return fmt.Errorf("%w: expected %v to be greater than %v", ErrActionAssertGt, value, v)
+			}
+			return nil
+		},
+		support:   []Support{SupportJson, SupportStatus},
+		baseError: ErrActionAssertGt,
+	}
+}
+
+// AssertGte asserts that given value is greater than or equal to the value in the response
+func AssertGte[T constraints.Integer](value T) Action {
+	return &actionFunc{
+		value: func(t require.TestingT) (any, bool) {
+			return value, true
+		},
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if !assert.GreaterOrEqual(&requireTestingT{}, v, value) {
+				return fmt.Errorf("%w: expected %v to be greater than or equal to %v", ErrActionAssertGte, v, value)
+			}
+			return nil
+		},
+		support:   []Support{SupportJson, SupportStatus},
+		baseError: ErrActionAssertGte,
+	}
+}
+
 // AssertIn asserts that value is in the given list of values
 func AssertIn[T any](values ...T) Action {
 	return &actionFunc{
@@ -144,6 +185,47 @@ func AssertLen[T constraints.Integer](l T) Action {
 	}
 }
 
+// AssertLt asserts that given value is less than the value in the response
+func AssertLt[T constraints.Integer](value T) Action {
+	return &actionFunc{
+		value: func(t require.TestingT) (any, bool) {
+			return value, true
+		},
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			if !assert.Less(&requireTestingT{}, v, value) {
+				return fmt.Errorf("%w: expected %v to be less than %v", ErrActionAssertLt, v, value)
+			}
+			return nil
+		},
+		support:   []Support{SupportJson, SupportStatus},
+		baseError: ErrActionAssertLt,
+	}
+}
+
+// AssertLte asserts that given value is less than or equal to the value in the response
+func AssertLte[T constraints.Integer](value T) Action {
+	return &actionFunc{
+		value: func(t require.TestingT) (any, bool) {
+			return value, true
+		},
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			if !assert.LessOrEqual(&requireTestingT{}, v, value) {
+				return fmt.Errorf("%w: expected %v to be less than or equal to %v", ErrActionAssertLte, v, value)
+
+			}
+			return nil
+		},
+		support:   []Support{SupportJson, SupportStatus},
+		baseError: ErrActionAssertLte,
+	}
+}
+
 // AssertNotEquals asserts that given value is not equal to the value in the response
 func AssertNotEquals(value any) Action {
 	return &actionFunc{
@@ -202,111 +284,9 @@ func AssertNotIn[T any](values ...T) Action {
 	}
 }
 
-// length type to handle the length of a slice or map
-type length int
-
-// UnmarshalJSON unmarshal the JSON data into a length type
-func (l *length) UnmarshalJSON(b []byte) error {
-	// first unmarshal slice
-	var arr []any
-
-	if err := json.Unmarshal(b, &arr); err != nil {
-		// second unmarshal map
-		var m map[string]any
-		if err := json.Unmarshal(b, &m); err != nil {
-			return err
-		}
-		*l = length(len(m))
-	}
-	*l = length(len(arr))
-
-	return nil
-}
-
-// AssertGt asserts that given value is greater than the value in the response
-func AssertGt[T constraints.Integer](value T) Action {
-	return &actionFunc{
-		value: func(t require.TestingT) (any, bool) {
-			return value, true
-		},
-		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
-			if err != nil {
-				return err
-			}
-			if !assert.Greater(&requireTestingT{}, v, value) {
-				return fmt.Errorf("%w: expected %v to be greater than %v", ErrActionAssertGt, value, v)
-			}
-			return nil
-		},
-		support:   []Support{SupportJson, SupportStatus},
-		baseError: ErrActionAssertGt,
-	}
-}
-
-// AssertGte asserts that given value is greater than or equal to the value in the response
-func AssertGte[T constraints.Integer](value T) Action {
-	return &actionFunc{
-		value: func(t require.TestingT) (any, bool) {
-			return value, true
-		},
-		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if !assert.GreaterOrEqual(&requireTestingT{}, v, value) {
-				return fmt.Errorf("%w: expected %v to be greater than or equal to %v", ErrActionAssertGte, v, value)
-			}
-			return nil
-		},
-		support:   []Support{SupportJson, SupportStatus},
-		baseError: ErrActionAssertGte,
-	}
-}
-
-// AssertLt asserts that given value is less than the value in the response
-func AssertLt[T constraints.Integer](value T) Action {
-	return &actionFunc{
-		value: func(t require.TestingT) (any, bool) {
-			return value, true
-		},
-		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
-			if err != nil {
-				return err
-			}
-			if !assert.Less(&requireTestingT{}, v, value) {
-				return fmt.Errorf("%w: expected %v to be less than %v", ErrActionAssertLt, v, value)
-			}
-			return nil
-		},
-		support:   []Support{SupportJson, SupportStatus},
-		baseError: ErrActionAssertLt,
-	}
-}
-
-// AssertLte asserts that given value is less than or equal to the value in the response
-func AssertLte[T constraints.Integer](value T) Action {
-	return &actionFunc{
-		value: func(t require.TestingT) (any, bool) {
-			return value, true
-		},
-		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
-			if err != nil {
-				return err
-			}
-			if !assert.LessOrEqual(&requireTestingT{}, v, value) {
-				return fmt.Errorf("%w: expected %v to be less than or equal to %v", ErrActionAssertLte, v, value)
-
-			}
-			return nil
-		},
-		support:   []Support{SupportJson, SupportStatus},
-		baseError: ErrActionAssertLte,
-	}
-}
-
 // AssertRegex asserts that given value matches the regex in the response
-// if count provided it will check for the number of matches, otherwise it will check if the value matches the regex
+// if count provided it will check for the number of matches,
+// otherwise it will check if the value matches the regex
 func AssertRegex(pattern *regexp.Regexp, count ...int) Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
@@ -328,4 +308,25 @@ func AssertRegex(pattern *regexp.Regexp, count ...int) Action {
 		support:   []Support{SupportHeader, SupportJson, SupportStatus},
 		baseError: ErrActionAssertRegex,
 	}
+}
+
+// length type to handle the length of a slice or map
+type length int
+
+// UnmarshalJSON unmarshal the JSON data into a length type
+func (l *length) UnmarshalJSON(b []byte) error {
+	// first unmarshal slice
+	var arr []any
+
+	if err := json.Unmarshal(b, &arr); err != nil {
+		// second unmarshal map
+		var m map[string]any
+		if err := json.Unmarshal(b, &m); err != nil {
+			return err
+		}
+		*l = length(len(m))
+	}
+	*l = length(len(arr))
+
+	return nil
 }

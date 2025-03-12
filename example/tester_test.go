@@ -80,7 +80,11 @@ func TestTester(t *testing.T) {
 				Json(t, "users.0", action.UnmarshalObjectKeys(action.KV{
 					"id":   &userObj.ID,
 					"name": &userObj.Name,
-				}))
+				})).
+				Json(t, "users.0.id", action.AssertAll(
+					action.AssertGte(0),
+					action.AssertLte(1),
+				))
 
 			// test Unmarshal
 			assert.Equal(t, user.ID, 1)

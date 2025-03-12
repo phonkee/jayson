@@ -33,7 +33,7 @@ import (
 )
 
 // AssertAll asserts that all actions are executed
-func AssertAll(t require.TestingT, a ...Action) Action {
+func AssertAll(a ...Action) Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, _ any, raw json.RawMessage, err error) error {
 			if err != nil {
@@ -70,7 +70,7 @@ func AssertAll(t require.TestingT, a ...Action) Action {
 }
 
 // AssertAny asserts that any action succeeded
-func AssertAny(t require.TestingT, a ...Action) Action {
+func AssertAny(a ...Action) Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, _ any, raw json.RawMessage, err error) error {
 			if err != nil {

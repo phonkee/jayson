@@ -52,10 +52,10 @@ type APIClient interface {
 	// ReverseURL creates a path by given url name and url arguments
 	ReverseURL(t require.TestingT, name string, extra ...resolver.Extra) string
 
-	// ReverseArgs creates a resolver.Extra from given key value pairs
+	// ReverseArgs creates a resolver.Extra from given key action pairs
 	ReverseArgs(t require.TestingT, kv ...string) resolver.Extra
 
-	// ReverseQuery creates a resolver.Extra from given key value pairs
+	// ReverseQuery creates a resolver.Extra from given key action pairs
 	ReverseQuery(t require.TestingT, kv ...string) resolver.Extra
 }
 
@@ -73,13 +73,13 @@ type APIRequest interface {
 
 // APIResponse is the interface for testing the rest APIClient response
 type APIResponse interface {
-	// Header asserts that response header value is equal to given value
+	// Header asserts that response header action is equal to given action
 	Header(t require.TestingT, key string, action action.Action) APIResponse
 
 	// Json calls the action on the json response path
 	Json(t require.TestingT, path string, action action.Action) APIResponse
 
-	// Status asserts that response status is equal to given value
+	// Status asserts that response status is equal to given action
 	Status(t require.TestingT, action action.Action) APIResponse
 }
 

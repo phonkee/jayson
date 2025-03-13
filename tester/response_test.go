@@ -44,89 +44,87 @@ func matchByStringContains(s string) func(in string) bool {
 }
 
 type testStruct struct {
-	Value string `json:"value"`
+	Value string `json:"action"`
 }
 
 func ptrTo[T any](v T) *T {
 	return &v
 }
 
-//func TestResponse_AssertHeaderValue(t *testing.T) {
-//	t.Skip("test contains", func(t *testing.T) {
-//		for _, item := range []struct {
-//			name    string
-//			headers http.Header
-//			key     string
-//			value   string
-//		}{
-//			{
-//				name:    "header exists",
-//				headers: map[string][]string{"Hello": {"World"}},
-//				key:     "Hello",
-//				value:   "World",
-//			},
-//			{
-//				name:    "header does not exist",
-//				headers: map[string][]string{"Hello": {"This", "World"}},
-//				key:     "Hello",
-//				value:   "World",
-//			},
-//		} {
-//			t.Run(item.name, func(t *testing.T) {
-//				rw := httptest.NewRecorder()
-//				req := httptest.NewRequest(http.MethodGet, "/", nil)
-//				for k, v := range item.headers {
-//					rw.Header()[k] = v
-//				}
-//				r := newResponse(rw, req)
-//				r.AssertHeaderValue(t, item.key, item.value)
-//			})
-//		}
-//	})
-//
-//	t.Run("test does not contain", func(t *testing.T) {
-//		for _, item := range []struct {
-//			name    string
-//			headers http.Header
-//			key     string
-//			value   string
-//		}{
-//			{
-//				name:    "header exists",
-//				headers: map[string][]string{"Hello": {"World"}},
-//				key:     "Hello",
-//				value:   "Other",
-//			},
-//			{
-//				name:    "header does not exist",
-//				headers: map[string][]string{"Hello": {"This", "World"}},
-//				key:     "Nope",
-//				value:   "World",
-//			},
-//		} {
-//			t.Run(item.name, func(t *testing.T) {
-//				rw := httptest.NewRecorder()
-//				req := httptest.NewRequest(http.MethodGet, "/", nil)
-//				for k, v := range item.headers {
-//					rw.Header()[k] = v
-//				}
-//				r := newResponse(rw, req)
-//
-//				// mock testing
-//				m := mocks.NewTestingT(t)
-//				m.On("Errorf", mock.Anything, mock.MatchedBy(func(in string) bool {
-//					return strings.Contains(in, fmt.Sprintf("header `%v` not found or does not have value", item.key))
-//				})).Return()
-//				m.On("FailNow").Once()
-//				r.AssertHeaderValue(m, item.key, item.value)
-//				m.AssertExpectations(t)
-//				m.AssertNumberOfCalls(t, "Errorf", 1)
-//				m.AssertNumberOfCalls(t, "FailNow", 1)
-//			})
-//		}
-//	})
-//
-//}
+func TestResponse_Header(t *testing.T) {
+	t.Run("test contains", func(t *testing.T) {
+		for _, item := range []struct {
+			name    string
+			headers http.Header
+			key     string
+			action  action.Action
+		}{
+			{
+				name:    "header exists",
+				headers: map[string][]string{"Hello": {"World"}},
+				key:     "Hello",
+				action:  action.AssertEquals("World"),
+			},
+			{
+				name:    "header does not exist",
+				headers: map[string][]string{"Hello": {"This", "World"}},
+				key:     "Hello",
+				action:  action.AssertEquals("This"),
+			},
+		} {
+			t.Run(item.name, func(t *testing.T) {
+				rw := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodGet, "/", nil)
+				for k, v := range item.headers {
+					rw.Header()[k] = v
+				}
+				r := newResponse(rw, req)
+				r.Header(t, item.key, item.action)
+			})
+		}
+	})
+
+	t.Run("test does not contain", func(t *testing.T) {
+		for _, item := range []struct {
+			name    string
+			headers http.Header
+			key     string
+			action  action.Action
+		}{
+			{
+				name:    "header exists",
+				headers: map[string][]string{"Hello": {"World"}},
+				key:     "Hello",
+				action:  action.AssertExists(),
+			},
+			{
+				name:    "header does not exist",
+				headers: map[string][]string{"Hello": {"This", "World"}},
+				key:     "Nope",
+				action:  action.AssertNotExists(),
+			},
+		} {
+			t.Run(item.name, func(t *testing.T) {
+				rw := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodGet, "/", nil)
+				for k, v := range item.headers {
+					rw.Header()[k] = v
+				}
+				r := newResponse(rw, req)
+
+				// mock testing
+				m := mocks.NewTestingT(t)
+				//m.On("Errorf", mock.MatchedBy(matchByStringContains(item.expect)))
+				//m.On("FailNow")
+				r.Header(m, item.key, item.action)
+				//m.AssertExpectations(t)
+				//m.AssertNumberOfCalls(t, "Errorf", 1)
+				//m.AssertNumberOfCalls(t, "FailNow", 1)
+			})
+		}
+	})
+
+}
 
 func TestResponse_Json(t *testing.T) {
 
@@ -169,37 +167,37 @@ func TestResponse_Json(t *testing.T) {
 			},
 			{
 				name:   "test slice of objects to object",
-				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": "Doe"}}]}`,
+				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"action": "Doe"}}]}`,
 				path:   "other.2.object",
 				action: action.AssertEquals(testStruct{Value: "Doe"}),
 			},
 			{
 				name:   "test slice of objects to pointer to object",
-				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": "Doe"}}]}`,
+				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"action": "Doe"}}]}`,
 				path:   "other.2.object",
 				action: action.AssertEquals(&testStruct{Value: "Doe"}),
 			},
 			{
 				name:   "test slice of objects to pointer to integer",
-				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42}}]}`,
-				path:   "other.2.object.value",
+				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"action": 42}}]}`,
+				path:   "other.2.object.action",
 				action: action.AssertEquals(42),
 			},
 			{
 				name:   "test slice of objects to pointer to integer (with dots)",
-				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42}}]}`,
-				path:   "other.2......object.value",
+				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"action": 42}}]}`,
+				path:   "other.2......object.action",
 				action: action.AssertEquals(ptrTo(42)),
 			},
 			{
 				name:   "test raw json",
-				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+				body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"action": 42, "other": 12}}]}`,
 				path:   "other.2",
-				action: action.AssertEquals(json.RawMessage(`{"object": {"value": 42, "other": 12}}`)),
+				action: action.AssertEquals(json.RawMessage(`{"object": {"action": 42, "other": 12}}`)),
 			},
 			{
 				name: "test raw json",
-				body: `{"other": [{"value": "John"}, {"value": "Doe"}, {"value": "Mark", "extra": "extra"}]}`,
+				body: `{"other": [{"action": "John"}, {"action": "Doe"}, {"action": "Mark", "extra": "extra"}]}`,
 				path: "other",
 				action: action.AssertEquals([]testStruct{
 					{Value: "John"},
@@ -228,13 +226,13 @@ func TestResponse_Json(t *testing.T) {
 				}{
 					{
 						name:   "test len of array",
-						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"action": 42, "other": 12}}]}`,
 						path:   "other",
 						action: action.AssertLen(3),
 					},
 					{
 						name:   "test len of array",
-						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"action": 42, "other": 12}}]}`,
 						path:   "other.2.object",
 						action: action.AssertLen(2),
 					},
@@ -257,21 +255,21 @@ func TestResponse_Json(t *testing.T) {
 				}{
 					{
 						name:   "test len of string",
-						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"action": 42, "other": 12}}]}`,
 						path:   "other.0.name",
 						what:   action.AssertLen(1),
 						expect: "FAILED: `response.Json`, path: `other.0.name`, unmarshal error: cannot get length of value that is not slice or map",
 					},
 					{
 						name:   "test len of int",
-						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+						body:   `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"action": 42, "other": 12}}]}`,
 						path:   "other.2.object.other",
 						what:   action.AssertLen(1),
 						expect: "FAILED: `response.Json`, path: `other.2.object.other`, unmarshal error: cannot get length of value that is not slice or map",
 					},
 					{
 						name: "test len of int",
-						body: `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"value": 42, "other": 12}}]}`,
+						body: `{"other": [{"name": "John"}, {"name": "Doe"}, {"object": {"action": 42, "other": 12}}]}`,
 						path: "other.2.object.other",
 						what: action.AssertLen(1),
 					},
@@ -759,7 +757,7 @@ func TestResponse_Json(t *testing.T) {
 				body:          `[{"name": "John"}]`,
 				path:          "name",
 				action:        action.AssertEquals(ptrTo(42)),
-				expectedError: "FAILED: `response.Json`, path: `name`, cannot unmarshal value",
+				expectedError: "FAILED: `response.Json`, path: `name`, cannot unmarshal action",
 			},
 		} {
 			t.Run(item.name, func(t *testing.T) {

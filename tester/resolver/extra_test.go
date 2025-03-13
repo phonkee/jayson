@@ -60,7 +60,6 @@ func TestArguments(t *testing.T) {
 		m.On("FailNow").Once()
 		Arguments(m, "hello")
 	})
-
 }
 
 func TestQuery(t *testing.T) {

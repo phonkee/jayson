@@ -81,12 +81,12 @@ func (c *client) ReverseURL(t require.TestingT, name string, extra ...resolver.E
 	return c.deps.ReverseURL(t, name, extra...)
 }
 
-// ReverseArgs adds arguments key value pairs to resolver.Extra for ReverseURL
+// ReverseArgs adds arguments key action pairs to resolver.Extra for ReverseURL
 func (c *client) ReverseArgs(t require.TestingT, kv ...string) resolver.Extra {
 	return c.deps.ReverseArgs(t, kv...)
 }
 
-// ReverseQuery adds query key value pairs to resolver.Extra for ReverseURL
+// ReverseQuery adds query key action pairs to resolver.Extra for ReverseURL
 func (c *client) ReverseQuery(t require.TestingT, kv ...string) resolver.Extra {
 	return c.deps.ReverseQuery(t, kv...)
 }

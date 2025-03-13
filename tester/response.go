@@ -56,16 +56,45 @@ type response struct {
 }
 
 // Header runs action against given header key
-// TODO: implement
 func (r *response) Header(t require.TestingT, key string, a action.Action) APIResponse {
 	assert.Truef(t, a.Supports(action.SupportHeader), "action %v is not supported in Header call", a)
 
-	//for _, v := range r.rw.Result().Header[key] {
-	//	if v == value {
-	//		return r
-	//	}
-	//}
-	//require.Failf(t, "fail", "header `%s` not found or does not have value", key)
+	var (
+		err error
+		raw json.RawMessage = nil
+	)
+
+	// check if header is present and get get action and marshal to json (we use json code and it's easier)
+	if _, ok := r.rw.Result().Header[key]; ok {
+		value := r.rw.Result().Header.Get(key)
+		var buffer bytes.Buffer
+		if err = json.NewEncoder(&buffer).Encode(value); err == nil {
+			raw = buffer.Bytes()
+		}
+	} else {
+		err = fmt.Errorf("header not present")
+	}
+
+	// context instance
+	ctx := context.WithValue(context.Background(), action.ContextKeyUnmarshalActionValue, r.unmarshalActionValue)
+
+	var value any
+
+	// if we don't have any error, we can try to unmarshal the action
+	if err == nil {
+		value, err = r.unmarshalActionValue(t, raw, a)
+	}
+
+	// check if unmarshal was not applied
+	if errors.Is(err, action.ErrActionNotApplied) {
+		err = nil
+	}
+
+	// now run action
+	if err := a.Run(t, ctx, value, raw, err); err != nil {
+		require.Fail(t, fmt.Sprintf("FAILED: `response.Header`, name: `%s`, %v", key, err.Error()))
+	}
+
 	return r
 }
 
@@ -110,7 +139,7 @@ main:
 
 		// try to unmarshal object, if it fails there is a problem
 		if err = json.Unmarshal(raw, &obj); err != nil {
-			err = fmt.Errorf("cannot unmarshal value")
+			err = fmt.Errorf("cannot unmarshal action")
 			break main
 		}
 
@@ -126,7 +155,7 @@ main:
 
 	var value any
 
-	// if we don't have any error, we can try to unmarshal the value
+	// if we don't have any error, we can try to unmarshal the action
 	if err == nil {
 		value, err = r.unmarshalActionValue(t, raw, a)
 	}
@@ -148,10 +177,10 @@ main:
 func (r *response) Status(t require.TestingT, a action.Action) APIResponse {
 	assert.Truef(t, a.Supports(action.SupportStatus), "action %v is not supported in Status call", a)
 
-	// prepare raw value (json)
+	// prepare raw action (json)
 	raw := json.RawMessage(strconv.FormatInt(int64(r.rw.Code), 10))
 
-	// unmarshal value
+	// unmarshal action
 	value, err := r.unmarshalActionValue(t, raw, a)
 
 	// check if unmarshal was not applied
@@ -170,9 +199,9 @@ func (r *response) Status(t require.TestingT, a action.Action) APIResponse {
 	return r
 }
 
-// unmarshal given message action new value of given type
+// unmarshal given message action new action of given type
 func (r *response) unmarshalActionValue(t require.TestingT, raw json.RawMessage, a action.Action) (any, error) {
-	// check if we have value provided
+	// check if we have action provided
 	if v, ok := a.Value(t); ok {
 		var value any
 		var val reflect.Value
@@ -182,10 +211,10 @@ func (r *response) unmarshalActionValue(t require.TestingT, raw json.RawMessage,
 		} else {
 			val = reflect.New(typ)
 		}
-		// prepare value
+		// prepare action
 		value = val.Interface()
 
-		// unmarshal value
+		// unmarshal action
 		if err := json.NewDecoder(bytes.NewBuffer(raw)).Decode(value); err != nil {
 			return nil, fmt.Errorf("%w: %s", action.ErrUnmarshal, err)
 		}

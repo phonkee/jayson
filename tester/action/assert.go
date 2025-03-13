@@ -266,7 +266,7 @@ func AssertNotExists() Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
-				return err
+				return nil
 			}
 			if raw != nil {
 				return fmt.Errorf("%w: expected value to not exist, but it does", ErrActionAssertNotExists)

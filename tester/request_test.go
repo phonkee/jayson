@@ -60,11 +60,11 @@ func (n noopHandler) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 
 func TestRequest_Header(t *testing.T) {
 	r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}}).
-		Header(t, "key", "value")
+		Header(t, "key", "action")
 	r.Do(t, context.Background())
 	assert.Equal(t, []string{ContentTypeJSON}, r.(*request).header.Values(ContentTypeHeader))
 	assert.Equal(t, ContentTypeJSON, r.(*request).header.Get(ContentTypeHeader))
-	assert.Equal(t, "value", r.(*request).header.Get("key"))
+	assert.Equal(t, "action", r.(*request).header.Get("key"))
 }
 
 func TestRequest_Query(t *testing.T) {
@@ -76,8 +76,8 @@ func TestRequest_Query(t *testing.T) {
 	}{
 		{
 			name:     "test query",
-			query:    map[string]string{"key": "value"},
-			expected: "key=value",
+			query:    map[string]string{"key": "action"},
+			expected: "key=action",
 		},
 	} {
 		t.Run(item.name, func(t *testing.T) {
@@ -115,28 +115,28 @@ func TestRequest_Body(t *testing.T) {
 	}{
 		{
 			name:     "test string",
-			body:     `{"value":"value"}`,
-			expected: `{"value":"value"}`,
+			body:     `{"action":"action"}`,
+			expected: `{"action":"action"}`,
 		},
 		{
 			name:     "test string",
-			body:     []byte(`{"value":"value"}`),
-			expected: `{"value":"value"}`,
+			body:     []byte(`{"action":"action"}`),
+			expected: `{"action":"action"}`,
 		},
 		{
 			name:     "test string",
-			body:     strings.NewReader(`{"value":"value"}`),
-			expected: `{"value":"value"}`,
+			body:     strings.NewReader(`{"action":"action"}`),
+			expected: `{"action":"action"}`,
 		},
 
 		{
 			name: "test struct",
 			body: struct {
-				Value string `json:"value"`
+				Value string `json:"action"`
 			}{
-				Value: "value",
+				Value: "action",
 			},
-			expected: `{"value":"value"}`,
+			expected: `{"action":"action"}`,
 		},
 	} {
 		t.Run(item.name, func(t *testing.T) {

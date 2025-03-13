@@ -87,142 +87,97 @@ func TestHealthHandler(t *testing.T) {
 
 # Response
 
-# TODO
-
-
-Tester library provides a set of assertions that can be used to test APIs.
-Some are basic, some are more complex. Let's go through them.
-Let's assume that we have instance of APIClient `api` that is used to make requests.
-
-## Status
-
-Asserts that response status code is equal to provided status code.
+Response provides multiple methods to inspect response.
+Each accepts action which can be one from Assert actions or Unmarshal actions.
+Let me show example of all of them
 
 ```go
-api.Get(t, "/api/v1/health").
-    Do(t, context.TODO()).
-    Status(t, http.StatusOK)
-```
+package main
 
-## AssertHeaderValue
+import (
+	"context"
+	"encoding/json"
+	"github.com/gorilla/mux"
+	"github.com/phonkee/jayson/tester"
+	"github.com/phonkee/jayson/tester/action"
+	"github.com/phonkee/jayson/tester/resolver"
+	"github.com/stretchr/testify/assert"
+	"net/http"
+	"regexp"
+	"testing"
+)
 
-Asserts that response header into is equal to provided into.
-
-```go
-api.Get(t, "/api/v1/health").
-    Do(t, context.TODO()).
-    AssertHeaderValue(t, "Content-Type", "application/json")
-```
-
-## AssertJsonEquals
-
-Asserts that response body is equal to provided object/string/bytes.
-
-```go
-type HealthResponse struct {
-    Status string `json:"status"`
+type User struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
-api.Get(t, "/api/v1/health").
-    Do(t, context.TODO()).
-    AssertJsonEquals(t, HealthResponse{
-        Status: "ok",
-    })
-```
-
-## Unmarshal
-
-Unmarshal is not assertion but it is used to unmarshal response body to provided object.
-
-```go
-var response HealthResponse
-api.Get(t, "/api/v1/health").
-    Do(t, context.TODO()).
-    Status(t, http.StatusOK).
-    Unmarshal(t, &response)
-```
-
-## AssertJsonPath
-
-This assertion is the most complex one. It is used to assert json path in response body.
-It not just asserts that path exists but also that into is equal to provided into.
-On top of that there are ways to assert that into is not only equal but also greater, less, etc.
-Path can contain also array indexes.
-Let's see some examples.
-Let's suppose the api returns following json object for `/api/v1/users` endpoint.
-
-```json
-{
-    "status": "ok",
-    "data": {
-        "users": [
-            {
-                "id": 1,
-                "name": "Peter"
-            },
-            {
-                "id": 2,
-                "name": "John"
-            }
-        ]
-    }
+func ListUsers(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{"users": [{"id":1,"name":"John Doe"}]}`))
 }
-```
 
-Now let's see some examples how we can assert data by json path.
+func TestTester(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/users", ListUsers).Methods(http.MethodGet).Name("api:v1:users:list")
 
-```go
-// assert that status is ok
-api.Get(t, "/api/v1/users").
-    Do(t, context.TODO()).
-    AssertJsonPath(t, "status", "ok").
+	tester.WithHttpServer(t, context.Background(), router, func(t *testing.T, ctx context.Context, address string) {
+		// test api
+		tester.WithAPI(t, &tester.Deps{
+			Resolver: resolver.NewGorillaResolver(t, router),
+			Address:  address,
+		}, func(api tester.APIClient) {
+			user := User{}
+			userObj := User{}
+			api.Get(t, api.ReverseURL(t, "api:v1:users:list")).
+				Do(t, ctx).
+				Status(t, action.AssertEquals(http.StatusOK)).
+				Json(t, "users.0.name", action.AssertNotEquals("Johnson Doe")).
+				Json(t, "users.0.name", action.AssertEquals("John Doe")).
+				Json(t, "users.0", action.AssertEquals(json.RawMessage(`{"id":1,"name":"John Doe"}`))).
+				Json(t, "users.0.name", action.AssertIn("John Doe", "Peter Vrba")).
+				Json(t, "users.0.name", action.AssertNotIn("Johnson Doe", "Peter Vrba")).
+				Json(t, "users", action.AssertExists()).
+				Json(t, "user", action.AssertNotExists()).
+				Json(t, "users", action.AssertLen(1)).
+				Json(t, "users.0", action.AssertKeys("id", "name")).
+				Json(t, "users.0.id", action.AssertGte(1)).
+				Json(t, "users.0.id", action.AssertGt(0)).
+				Json(t, "users.0.id", action.AssertLt(2)).
+				Json(t, "users.0.id", action.AssertLte(1)).
+				Json(t, "users.0", action.Unmarshal(&user)).
+				Json(t, "users.0.id", action.AssertAll(
+					action.AssertGte(0),
+					action.AssertLte(1),
+					action.AssertExists(),
+				)).
+				Json(t, "users.0.id", action.AssertAny(
+					action.AssertGte(0),
+					action.AssertLte(0),
+					action.AssertNotExists(),
+				)).
+				Json(t, "users.0.id", action.AssertRegex(
+					regexp.MustCompile(`\d+`),
+				)).
+				Json(t, "users.0", action.UnmarshalObjectKeys(action.KV{
+					"id":   &userObj.ID,
+					"name": &userObj.Name,
+				}))
 
-// assert that users array has length of 2
-api.Get(t, "/api/v1/users").
-    Do(t, context.TODO()).
-    AssertJsonPath(t, "data.users.__len__", 2).
+			// test Unmarshal
+			assert.Equal(t, user.ID, 1)
+			assert.Equal(t, user.Name, "John Doe")
 
-// assert that first user has id 1
-api.Get(t, "/api/v1/users").
-    Do(t, context.TODO()).
-    AssertJsonPath(t, "data.users.0.id", 1).
-
-// assert that data has key users
-api.Get(t, "/api/v1/users").
-    Do(t, context.TODO()).
-    AssertJsonPath(t, "data.users.__keys__", []string{"users"}).
-
-// prepare simple struct for partial unmarshalling
-type SimpleUser struct {
-    ID int `json:"id"`
+			// test UnmarshalObjectKeys
+			assert.Equal(t, userObj.ID, 1)
+			assert.Equal(t, userObj.Name, "John Doe")
+		})
+	})
 }
-// assert that users data equals to provided slice
-api.Get(t, "/api/v1/users").
-    Do(t, context.TODO()).
-    AssertJsonPath(t, "data.users", []SimpleUser{
-        {ID: 1}, {ID: 2}
-    })
 
-// assert key users exists
-api.Get(t, "/api/v1/users").
-    Do(t, context.TODO()).
-    AssertJsonPath(t, "data.users.__exists__", nil)
-
-// assert that first user id is greater than 0
-api.Get(t, "/api/v1/users").
-    Do(t, context.TODO()).
-    AssertJsonPath(t, "data.users.0.id.__gte__", 1)
-
-// assert that name of first user is Peter
-api.Get(t, "/api/v1/users").
-    Do(t, context.TODO()).
-    AssertJsonPath(t, "data.users.0.name", "Peter")
-
-// assert that name of first user is not John
-api.Get(t, "/api/v1/users").
-    Do(t, context.TODO()).
-    AssertJsonPath(t, "data.users.0.name.__neq__", "John")
 ```
+
 
 # TODO
 - [ ] AssertZero - assert zero value (0, "", nil, [], {}, false)

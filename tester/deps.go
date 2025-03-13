@@ -34,12 +34,12 @@ import (
 )
 
 // Deps is the dependencies for the APIClient
-// Router is optional, if not provided, ReverseURL will not work
+// Resolve provides ReverseURL method, but is only optional
 // One of Handler or Address is required
 type Deps struct {
 	// Handler is the http.Handler
 	Handler http.Handler
-	// Addr is the address of the server
+	// Addr is the address of the server (host:port)
 	Address string
 	// Client sets custom http client
 	Client *http.Client
@@ -53,13 +53,13 @@ func (d *Deps) ReverseURL(t require.TestingT, name string, extra ...resolver.Ext
 	return d.Resolver.ReverseURL(t, name, extra...)
 }
 
-// ReverseArgs adds arguments key value pairs to resolver.Extra for ReverseURL
+// ReverseArgs adds arguments key action pairs to resolver.Extra for ReverseURL
 func (d *Deps) ReverseArgs(t require.TestingT, kv ...string) resolver.Extra {
 	assert.NotNil(t, d.Resolver, "Resolver is required")
 	return resolver.Arguments(t, kv...)
 }
 
-// ReverseQuery adds query key value pairs to resolver.Extra for ReverseURL
+// ReverseQuery adds query key action pairs to resolver.Extra for ReverseURL
 func (d *Deps) ReverseQuery(t require.TestingT, kv ...string) resolver.Extra {
 	assert.NotNil(t, d.Resolver, "Resolver is required")
 	return resolver.Query(t, kv...)

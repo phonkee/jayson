@@ -22,25 +22,45 @@
  * SOFTWARE.
  */
 
-package jayson
+package action
 
 import (
-	"github.com/stretchr/testify/assert"
-	"testing"
+	"context"
+	"encoding/json"
+	"github.com/stretchr/testify/require"
 )
 
-func TestCallerInfo(t *testing.T) {
-	t.Run("test getCallerInfo", func(t *testing.T) {
-		ci := getCallerInfo(100)
-		assert.NotEmpty(t, ci.file)
-		assert.NotEmpty(t, ci.fn)
-		assert.NotZero(t, ci.line)
-	})
+// actionFunc is a helper to create actions from functions
+type actionFunc struct {
+	run       func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error
+	value     func(t require.TestingT) (any, bool)
+	support   []Support
+	baseError error
+}
 
-	t.Run("test getCallerInfo with skip", func(t *testing.T) {
-		ci := getCallerInfo(100, 3)
-		assert.Equal(t, defaultUnknownFile, ci.file)
-		assert.Equal(t, defaultUnknownFn, ci.fn)
-		assert.Zero(t, ci.line)
-	})
+func (a *actionFunc) BaseError() error {
+	return a.baseError
+}
+
+func (a *actionFunc) Supports(support Support) bool {
+	for _, s := range a.support {
+		if s == support {
+			return true
+		}
+	}
+	return false
+}
+
+func (a *actionFunc) Value(t require.TestingT) (any, bool) {
+	if a.value != nil {
+		return a.value(t)
+	}
+	return nil, false
+}
+
+func (a *actionFunc) Run(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
+	if a.run != nil {
+		return a.run(t, ctx, value, raw, err)
+	}
+	return err
 }

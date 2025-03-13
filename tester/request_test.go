@@ -26,6 +26,7 @@ package tester
 
 import (
 	"context"
+	"github.com/phonkee/jayson/tester/action"
 	"github.com/phonkee/jayson/tester/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -44,17 +45,26 @@ func must[T any](v T, err error) T {
 }
 
 // noopHandler does nothing for testing purposes
-type noopHandler struct{}
+type noopHandler struct {
+	status int
+}
 
-func (n noopHandler) ServeHTTP(writer http.ResponseWriter, r *http.Request) {}
+// ServeHTTP is handler that writes status code
+func (n noopHandler) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
+	if n.status == 0 {
+		rw.WriteHeader(http.StatusOK)
+	} else {
+		rw.WriteHeader(n.status)
+	}
+}
 
 func TestRequest_Header(t *testing.T) {
-	r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}})
-	r.Header(t, "key", "value")
+	r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}}).
+		Header(t, "key", "action")
 	r.Do(t, context.Background())
-	assert.Equal(t, []string{ContentTypeJSON}, r.header.Values(ContentTypeHeader))
-	assert.Equal(t, ContentTypeJSON, r.header.Get(ContentTypeHeader))
-	assert.Equal(t, "value", r.header.Get("key"))
+	assert.Equal(t, []string{ContentTypeJSON}, r.(*request).header.Values(ContentTypeHeader))
+	assert.Equal(t, ContentTypeJSON, r.(*request).header.Get(ContentTypeHeader))
+	assert.Equal(t, "action", r.(*request).header.Get("key"))
 }
 
 func TestRequest_Query(t *testing.T) {
@@ -66,8 +76,8 @@ func TestRequest_Query(t *testing.T) {
 	}{
 		{
 			name:     "test query",
-			query:    map[string]string{"key": "value"},
-			expected: "key=value",
+			query:    map[string]string{"key": "action"},
+			expected: "key=action",
 		},
 	} {
 		t.Run(item.name, func(t *testing.T) {
@@ -92,7 +102,7 @@ func TestRequest_Query(t *testing.T) {
 			for key, value := range item.query {
 				r.Query(t, key, value)
 			}
-			r.Do(t, context.Background()).AssertStatus(t, http.StatusOK)
+			r.Do(t, context.Background()).Status(t, action.AssertEquals(http.StatusOK))
 		})
 	}
 }
@@ -105,28 +115,28 @@ func TestRequest_Body(t *testing.T) {
 	}{
 		{
 			name:     "test string",
-			body:     `{"value":"value"}`,
-			expected: `{"value":"value"}`,
+			body:     `{"action":"action"}`,
+			expected: `{"action":"action"}`,
 		},
 		{
 			name:     "test string",
-			body:     []byte(`{"value":"value"}`),
-			expected: `{"value":"value"}`,
+			body:     []byte(`{"action":"action"}`),
+			expected: `{"action":"action"}`,
 		},
 		{
 			name:     "test string",
-			body:     strings.NewReader(`{"value":"value"}`),
-			expected: `{"value":"value"}`,
+			body:     strings.NewReader(`{"action":"action"}`),
+			expected: `{"action":"action"}`,
 		},
 
 		{
 			name: "test struct",
 			body: struct {
-				Value string `json:"value"`
+				Value string `json:"action"`
 			}{
-				Value: "value",
+				Value: "action",
 			},
-			expected: `{"value":"value"}`,
+			expected: `{"action":"action"}`,
 		},
 	} {
 		t.Run(item.name, func(t *testing.T) {

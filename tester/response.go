@@ -26,13 +26,16 @@ package tester
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/phonkee/jayson/tester/action"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -52,205 +55,176 @@ type response struct {
 	body    []byte
 }
 
-// AssertHeaderValue asserts that response header value is equal to given value
-func (r *response) AssertHeaderValue(t require.TestingT, key, value string) APIResponse {
-	for _, v := range r.rw.Result().Header[key] {
-		if v == value {
-			return r
+// Header runs action against given header key
+func (r *response) Header(t require.TestingT, key string, a action.Action) APIResponse {
+	assert.Truef(t, a.Supports(action.SupportHeader), "action %v is not supported in Header call", a)
+
+	var (
+		err error
+		raw json.RawMessage = nil
+	)
+
+	// check if header is present and get get action and marshal to json (we use json code and it's easier)
+	if _, ok := r.rw.Result().Header[key]; ok {
+		value := r.rw.Result().Header.Get(key)
+		var buffer bytes.Buffer
+		if err = json.NewEncoder(&buffer).Encode(value); err == nil {
+			raw = buffer.Bytes()
 		}
+	} else {
+		err = fmt.Errorf("header not present")
 	}
-	require.Failf(t, "fail", "header `%s` not found or does not have value", key)
+
+	// context instance
+	ctx := context.WithValue(context.Background(), action.ContextKeyUnmarshalActionValue, r.unmarshalActionValue)
+
+	var value any
+
+	// if we don't have any error, we can try to unmarshal the action
+	if err == nil {
+		value, err = r.unmarshalActionValue(t, raw, a)
+	}
+
+	// check if unmarshal was not applied
+	if errors.Is(err, action.ErrActionNotApplied) {
+		err = nil
+	}
+
+	// now run action
+	if err := a.Run(t, ctx, value, raw, err); err != nil {
+		require.Fail(t, fmt.Sprintf("FAILED: `response.Header`, name: `%s`, %v", key, err.Error()))
+	}
+
 	return r
 }
 
-// AssertJsonEquals asserts that response body is equal to given json string or object/map
-func (r *response) AssertJsonEquals(t require.TestingT, expected any) APIResponse {
-	require.NotNilf(t, r.body, "response body is nil")
+// Json runs given action against json path
+func (r *response) Json(t require.TestingT, path string, a action.Action) APIResponse {
+	assert.Truef(t, a.Supports(action.SupportJson), "action %v is not supported in Json call", a)
 
-	var expectedStr string
-
-	switch expected.(type) {
-	case string:
-		expectedStr = expected.(string)
-	case []byte:
-		expectedStr = string(expected.([]byte))
-	default:
-		b, err := json.Marshal(expected)
-		require.NoErrorf(t, err, "failed to marshal expectedError value: %v", expected)
-		expectedStr = string(b)
-	}
-
-	require.JSONEq(t, expectedStr, string(r.body))
-	return r
-}
-
-// operation is the type of operation for json path
-type operation int
-
-const (
-	operationEquals operation = iota
-	operationGt
-	operationGte
-	operationLt
-	operationLte
-	operationNeq
-)
-
-// AssertJsonPath asserts that response body json path is equal to given value
-func (r *response) AssertJsonPath(t require.TestingT, path string, what any) APIResponse {
-	// set operation to equals
-	op := operationEquals
-
-	// check if path contains operation
+	raw := json.RawMessage(r.body)
 	path = strings.TrimSpace(path)
 
-	// first we get the splitted path
-	splitted := strings.Split(path, ".")
+	var (
+		err error
+		ok  bool
+	)
 
-	// prepare response body as raw message
-	var raw = json.RawMessage(r.body)
-
-	// iterate over all parts of the path
 main:
-	for _, part := range splitted {
+	for _, part := range strings.Split(path, ".") {
 		if part == "" {
-			continue
+			continue main
 		}
-		switch part {
-		case "__len__":
-			var array []json.RawMessage
-
-			// try to unmarshal into array first
-			if err := json.NewDecoder(bytes.NewReader(raw)).Decode(&array); err == nil {
-				raw = json.RawMessage(strconv.Itoa(len(array)))
-			} else {
-				var obj map[string]json.RawMessage
-				if err := json.NewDecoder(bytes.NewReader(raw)).Decode(&obj); err == nil {
-					raw = json.RawMessage(strconv.Itoa(len(obj)))
-				} else {
-					require.Failf(t, "", "path: `%v`, __len__ is only supported for arrays and objects", path)
-					return r
-				}
-			}
-			break main
-		case "__keys__":
-			var obj map[string]json.RawMessage
-			require.NoErrorf(t, json.NewDecoder(bytes.NewReader(raw)).Decode(&obj), "failed to unmarshal `%v` into `%T`", path, what)
-
-			keys := make([]string, 0, len(obj))
-			for k := range obj {
-				keys = append(keys, k)
-			}
-
-			original, ok := what.([]string)
-			require.Truef(t, ok, "expected `[]string`, got: %T: %v", what)
-
-			// now we need to sort the keys so we can compare them
-			sort.Strings(original)
-			sort.Strings(keys)
-
-			require.Equalf(t, what, keys, "keys are not equal")
-			return r
-		case "__exists__":
-			return r
-		case "__gt__":
-			op = operationGt
-			break main
-		case "__gte__":
-			op = operationGte
-			break main
-		case "__lt__":
-			op = operationLt
-			break main
-		case "__lte__":
-			op = operationLte
-			break main
-		case "__eq__":
-			op = operationEquals
-			break main
-		case "__neq__":
-			op = operationNeq
-			break main
-		default:
-			// mama says I'm special (but I'm not)
-		}
-
 		// try to parse the part as a number so we know we need to unmarshal array
-		if number, err := strconv.ParseUint(part, 10, 64); err == nil {
+		if number, numberError := strconv.ParseUint(part, 10, 64); numberError == nil {
 			var arr []json.RawMessage
-			require.NoErrorf(t, json.Unmarshal(raw, &arr), "failed to unmarshal array `%v` into `%T`", path, what)
-			require.Lessf(t, int(number), len(arr), "index out of bounds: %d", number)
+
+			// try to unmarshal array
+			if err = json.Unmarshal(raw, &arr); err != nil {
+				err = fmt.Errorf("cannot unmarshal object into slice")
+				break main
+			}
+
+			// check if the number is in bounds
+			if int(number) >= len(arr) {
+				err = fmt.Errorf("out of bounds")
+				break main
+			}
+
 			raw = arr[number]
 			continue main
 		}
-
 		// parse object
 		obj := make(map[string]json.RawMessage)
 
-		// unmarshal object
-		require.NoErrorf(t, json.Unmarshal(raw, &obj), "failed to unmarshal `%v` into `%T`", path, what)
+		// try to unmarshal object, if it fails there is a problem
+		if err = json.Unmarshal(raw, &obj); err != nil {
+			err = fmt.Errorf("cannot unmarshal action")
+			break main
+		}
 
-		require.Containsf(t, obj, part, "key `%s` in path `%s` not found", part, path)
-
-		raw = obj[part]
+		// check if object contains the part
+		if raw, ok = obj[part]; !ok {
+			err = fmt.Errorf("not present")
+			break main
+		}
 	}
 
-	// now we have the value in raw, we can unmarshal it into given value
-	var val reflect.Value
-	typ := reflect.TypeOf(what)
-	if typ.Kind() == reflect.Ptr {
-		val = reflect.New(typ.Elem())
-	} else {
-		val = reflect.New(typ)
+	// context instance
+	ctx := context.WithValue(context.Background(), action.ContextKeyUnmarshalActionValue, r.unmarshalActionValue)
+
+	var value any
+
+	// if we don't have any error, we can try to unmarshal the action
+	if err == nil {
+		value, err = r.unmarshalActionValue(t, raw, a)
 	}
 
-	// prepare value
-	target := val.Interface()
-	require.NoErrorf(t, json.NewDecoder(bytes.NewBuffer(raw)).Decode(target), "failed to unmarshal `%v` into `%T`", path, what)
-
-	// when not pointer, we need to get the value
-	if typ.Kind() != reflect.Ptr {
-		target = val.Elem().Interface()
+	// check if unmarshal was not applied
+	if errors.Is(err, action.ErrActionNotApplied) {
+		err = nil
 	}
 
-	// in case of json.RawMessage we call JSONEqf so it's compared as string in the correct order
-	if typ == jsonRawMessageType {
-		require.JSONEqf(t, string(what.(json.RawMessage)), string(target.(json.RawMessage)), "expectedError: %v, got: %v", what, target)
-		return r
-	}
-
-	switch op {
-	case operationGt:
-		assert.Greaterf(t, target, what, "value `%v` is not greater than `%v`", target, what)
-	case operationGte:
-		assert.GreaterOrEqualf(t, target, what, "value `%v` is not greater than or equal `%v`", target, what)
-	case operationLt:
-		assert.Lessf(t, target, what, "value `%v` is not less than `%v`", target, what)
-	case operationLte:
-		assert.LessOrEqualf(t, target, what, "value `%v` is not less than or equal `%v`", target, what)
-	case operationNeq:
-		assert.NotEqualf(t, what, target, "value `%v`, should not equal to `%v`, but it did", what, target)
-	default:
-		assert.Equalf(t, what, target, "expected: `%v`, got: `%v`", what, target)
+	// now run action
+	if err := a.Run(t, ctx, value, raw, err); err != nil {
+		require.Fail(t, fmt.Sprintf("FAILED: `response.Json`, path: `%s`, %v", path, err.Error()))
 	}
 
 	return r
 }
 
-var (
-	// jsonRawMessageType is the type of json.RawMessage
-	jsonRawMessageType = reflect.TypeOf(json.RawMessage(nil))
-)
+// Status runs given action against status
+func (r *response) Status(t require.TestingT, a action.Action) APIResponse {
+	assert.Truef(t, a.Supports(action.SupportStatus), "action %v is not supported in Status call", a)
 
-// AssertStatus asserts that response status is equal to given status
-func (r *response) AssertStatus(t require.TestingT, status int) APIResponse {
-	require.Equal(t, status, r.rw.Code)
+	// prepare raw action (json)
+	raw := json.RawMessage(strconv.FormatInt(int64(r.rw.Code), 10))
+
+	// unmarshal action
+	value, err := r.unmarshalActionValue(t, raw, a)
+
+	// check if unmarshal was not applied
+	if errors.Is(err, action.ErrActionNotApplied) {
+		err = nil
+	}
+
+	// context instance
+	ctx := context.WithValue(context.Background(), action.ContextKeyUnmarshalActionValue, r.unmarshalActionValue)
+
+	// now call a.Run
+	if err := a.Run(t, ctx, value, raw, err); err != nil {
+		require.NoError(t, err)
+	}
+
 	return r
 }
 
-// Unmarshal unmarshalls whole response body into given value
-func (r *response) Unmarshal(t require.TestingT, v any) APIResponse {
-	require.NotNilf(t, r.body, "response body is nil")
-	require.NoError(t, json.NewDecoder(bytes.NewReader(r.body)).Decode(v))
-	return r
+// unmarshal given message action new action of given type
+func (r *response) unmarshalActionValue(t require.TestingT, raw json.RawMessage, a action.Action) (any, error) {
+	// check if we have action provided
+	if v, ok := a.Value(t); ok {
+		var value any
+		var val reflect.Value
+		typ := reflect.TypeOf(v)
+		if typ.Kind() == reflect.Ptr {
+			val = reflect.New(typ.Elem())
+		} else {
+			val = reflect.New(typ)
+		}
+		// prepare action
+		value = val.Interface()
+
+		// unmarshal action
+		if err := json.NewDecoder(bytes.NewBuffer(raw)).Decode(value); err != nil {
+			return nil, fmt.Errorf("%w: %s", action.ErrUnmarshal, err)
+		}
+
+		if typ.Kind() != reflect.Ptr {
+			value = reflect.ValueOf(value).Elem().Interface()
+		}
+
+		return value, nil
+	}
+
+	return nil, action.ErrActionNotApplied
 }

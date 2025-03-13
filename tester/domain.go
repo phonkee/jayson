@@ -26,6 +26,7 @@ package tester
 
 import (
 	"context"
+	"github.com/phonkee/jayson/tester/action"
 	"github.com/phonkee/jayson/tester/resolver"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -51,10 +52,10 @@ type APIClient interface {
 	// ReverseURL creates a path by given url name and url arguments
 	ReverseURL(t require.TestingT, name string, extra ...resolver.Extra) string
 
-	// ReverseArgs creates a resolver.Extra from given key value pairs
+	// ReverseArgs creates a resolver.Extra from given key action pairs
 	ReverseArgs(t require.TestingT, kv ...string) resolver.Extra
 
-	// ReverseQuery creates a resolver.Extra from given key value pairs
+	// ReverseQuery creates a resolver.Extra from given key action pairs
 	ReverseQuery(t require.TestingT, kv ...string) resolver.Extra
 }
 
@@ -72,21 +73,14 @@ type APIRequest interface {
 
 // APIResponse is the interface for testing the rest APIClient response
 type APIResponse interface {
-	// AssertHeaderValue asserts that response header has given value for given key
-	AssertHeaderValue(t require.TestingT, key, value string) APIResponse
+	// Header asserts that response header action is equal to given action
+	Header(t require.TestingT, key string, action action.Action) APIResponse
 
-	// AssertJsonEquals asserts that response body is equal to given json
-	AssertJsonEquals(t require.TestingT, what any) APIResponse
+	// Json calls the action on the json response path
+	Json(t require.TestingT, path string, action action.Action) APIResponse
 
-	// AssertJsonPath asserts that given json path conforms to given value (special operations are supported)
-	// This method will unmarshal the body into the same type as the value
-	AssertJsonPath(t require.TestingT, path string, what any) APIResponse
-
-	// AssertStatus asserts that response status is equal to given status
-	AssertStatus(t require.TestingT, status int) APIResponse
-
-	// Unmarshal json unmarshalls whole response body into given value
-	Unmarshal(t require.TestingT, v any) APIResponse
+	// Status asserts that response status is equal to given action
+	Status(t require.TestingT, action action.Action) APIResponse
 }
 
 const (

@@ -25,6 +25,7 @@
 package tester_test
 
 import (
+	"context"
 	"github.com/phonkee/jayson/tester"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -33,19 +34,22 @@ import (
 
 func TestWithHttpServer(t *testing.T) {
 	t.Run("test invalid args", func(t *testing.T) {
+		validFn := func(t *testing.T, ctx context.Context, address string) {}
 		for _, item := range []struct {
 			handler http.Handler
-			fn      func(t *testing.T, address string)
+			ctx     context.Context
+			fn      func(t *testing.T, ctx context.Context, address string)
 		}{
-			{nil, func(t *testing.T, address string) {}},
-			{nil, func(t *testing.T, address string) {}},
-			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), nil},
+			{nil, context.Background(), validFn},
+			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), context.Background(), nil},
+			{http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {}), nil, validFn},
 		} {
 			assert.Panics(
 				t,
 				func() {
 					tester.WithHttpServer(
 						t,
+						item.ctx,
 						item.handler,
 						item.fn,
 					)
@@ -58,11 +62,12 @@ func TestWithHttpServer(t *testing.T) {
 		value := 0
 		tester.WithHttpServer(
 			t,
+			context.Background(),
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				value++
 				w.WriteHeader(http.StatusOK)
 			}),
-			func(t *testing.T, address string) {
+			func(t *testing.T, ctx context.Context, address string) {
 				resp, err := http.DefaultClient.Get("http://" + address)
 				assert.NoError(t, err)
 				assert.Equal(t, http.StatusOK, resp.StatusCode)

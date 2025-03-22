@@ -34,79 +34,54 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"strings"
 )
 
 // newRequest creates a new *request instance
-func newRequest(method, path string, deps *Deps) *request {
-	// TODO: we should create real request here
+func newRequest(t TestingT, method, path string, deps *Deps) *request {
+	req, err := http.NewRequest(method, path, nil)
+	require.NoError(t, err, "failed to create request: %v", err)
+
+	// set content type to json
+	req.Header.Set(ContentTypeHeader, ContentTypeJSON)
+
 	return &request{
-		method: method,
-		path:   path,
-		deps:   deps,
-		header: make(http.Header),
-		query:  make(url.Values),
+		deps: deps,
+		req:  req,
 	}
 }
 
 // request is the implementation of APIRequest
 type request struct {
-	method string
-	path   string
-	body   io.Reader
-	deps   *Deps
-	query  url.Values
-	header http.Header
+	deps *Deps
+	req  *http.Request
 }
 
 // Body sets the body of the request
 func (r *request) Body(t require.TestingT, body any) APIRequest {
 	switch body.(type) {
 	case string:
-		r.body = strings.NewReader(body.(string))
+		r.req.Body = NewReadCloser(strings.NewReader(body.(string)))
 	case []byte:
-		r.body = strings.NewReader(string(body.([]byte)))
+		r.req.Body = NewReadCloser(strings.NewReader(string(body.([]byte))))
 	case io.Reader:
-		r.body = body.(io.Reader)
+		r.req.Body = NewReadCloser(body.(io.Reader))
 	default:
 		buffer := new(bytes.Buffer)
 		assert.NoErrorf(t, json.NewEncoder(buffer).Encode(body), "cannot marshal to json: %v", body)
-		r.body = buffer
+		r.req.Body = NewReadCloser(buffer)
 	}
 	return r
 }
 
-// Do does the request and returns the response
+// Do the request and returns the response
 func (r *request) Do(t require.TestingT, ctx context.Context) APIResponse {
-	req, err := http.NewRequestWithContext(ctx, r.method, r.path, r.body)
-	assert.NoErrorf(t, err, "failed to create request: %v", err)
-
-	// set content type to json
-	r.header.Set(ContentTypeHeader, ContentTypeJSON)
-
-	// set headers to request
-	req.Header = r.header
+	// add context to request
+	req := r.req.WithContext(ctx)
 
 	// prepare recorder for response
 	rw := httptest.NewRecorder()
-
-	// merge query if present
-	if len(r.query) > 0 {
-		q := req.URL.Query()
-		for key, values := range r.query {
-			for _, value := range values {
-				q.Add(key, value)
-			}
-		}
-		req.URL.RawQuery = q.Encode()
-	}
-
-	// add header if present
-	if len(r.header) > 0 {
-		req.Header = r.header
-	}
 
 	// do the request to the address or handler
 	if r.deps.Address != "" {
@@ -166,8 +141,8 @@ func (r *request) doHandler(t require.TestingT, rw http.ResponseWriter, req *htt
 }
 
 // Header sets the header of the request
-func (r *request) Header(t require.TestingT, key, value string) APIRequest {
-	r.header.Add(key, value)
+func (r *request) Header(_ require.TestingT, key, value string) APIRequest {
+	r.req.Header.Add(key, value)
 	return r
 }
 
@@ -187,9 +162,9 @@ func (r *request) Print(writer ...io.Writer) APIRequest {
 	// TODO: do this in a better way
 	printf("Print:")
 	printf("  Request:")
-	printf("    URL: %v", r.path)
-	printf("    Method: %v", r.method)
-	printf("    Header: %v", r.header)
+	printf("    URL: %v", r.req.URL.String())
+	printf("    Method: %v", r.req.Method)
+	printf("    Header: %v", r.req.Header)
 
 	return r
 
@@ -197,7 +172,8 @@ func (r *request) Print(writer ...io.Writer) APIRequest {
 
 // Query sets the query of the request
 func (r *request) Query(t require.TestingT, key, value string) APIRequest {
-	r.query = make(url.Values)
-	r.query.Add(key, value)
+	q := r.req.URL.Query()
+	q.Add(key, value)
+	r.req.URL.RawQuery = q.Encode()
 	return r
 }

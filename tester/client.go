@@ -73,7 +73,7 @@ func (c *client) Put(t require.TestingT, path string) APIRequest {
 
 // Request does a response to the APIClient
 func (c *client) Request(t require.TestingT, method string, path string) APIRequest {
-	return newRequest(method, path, c.deps)
+	return newRequest(t, method, path, c.deps)
 }
 
 // ReverseURL creates a path by given url name and resolver extra

@@ -59,12 +59,12 @@ func (n noopHandler) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 }
 
 func TestRequest_Header(t *testing.T) {
-	r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}}).
+	r := newRequest(t, http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}}).
 		Header(t, "key", "action")
 	r.Do(t, context.Background())
-	assert.Equal(t, []string{ContentTypeJSON}, r.(*request).header.Values(ContentTypeHeader))
-	assert.Equal(t, ContentTypeJSON, r.(*request).header.Get(ContentTypeHeader))
-	assert.Equal(t, "action", r.(*request).header.Get("key"))
+	assert.Equal(t, []string{ContentTypeJSON}, r.(*request).req.Header.Values(ContentTypeHeader))
+	assert.Equal(t, ContentTypeJSON, r.(*request).req.Header.Get(ContentTypeHeader))
+	assert.Equal(t, "action", r.(*request).req.Header.Get("key"))
 }
 
 func TestRequest_Query(t *testing.T) {
@@ -90,6 +90,7 @@ func TestRequest_Query(t *testing.T) {
 			}, nil)
 
 			r := newRequest(
+				t,
 				http.MethodGet,
 				item.url,
 				&Deps{
@@ -140,10 +141,10 @@ func TestRequest_Body(t *testing.T) {
 		},
 	} {
 		t.Run(item.name, func(t *testing.T) {
-			r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}})
+			r := newRequest(t, http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}})
 			r.Body(t, item.body)
 
-			assert.JSONEq(t, item.expected, string(must(io.ReadAll(r.body))))
+			assert.JSONEq(t, item.expected, string(must(io.ReadAll(r.req.Body))))
 		})
 	}
 

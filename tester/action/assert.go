@@ -37,6 +37,29 @@ import (
 	"sort"
 )
 
+// AssertBetween asserts that given integer value is between the values (inclusive)
+func AssertBetween[T constraints.Integer](min, max T) Action {
+	return &actionFunc{
+		value: func(t require.TestingT) (any, bool) {
+			return min, true
+		},
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			if !assert.GreaterOrEqual(&requireTestingT{}, v, min) {
+				return fmt.Errorf("%w: expected %v to be between [%v, %v]", ErrActionAssertBetween, v, min, max)
+			}
+			if !assert.LessOrEqual(&requireTestingT{}, v, max) {
+				return fmt.Errorf("%w: expected %v to be between [%v, %v]", ErrActionAssertBetween, v, min, max)
+			}
+			return nil
+		},
+		support:   []Support{SupportJson, SupportStatus},
+		baseError: ErrActionAssertBetween,
+	}
+}
+
 // AssertEquals asserts that given value is equal to the value in the response
 func AssertEquals(value any) Action {
 	return &actionFunc{

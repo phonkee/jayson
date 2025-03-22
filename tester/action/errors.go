@@ -50,6 +50,7 @@ func newErrAction(name string) error {
 }
 
 var (
+	ErrActionAssertBetween       = newErrAction("AssertBetween")
 	ErrActionAssertEquals        = newErrAction("AssertEquals")
 	ErrActionAssertExists        = newErrAction("AssertExists")
 	ErrActionAssertIn            = newErrAction("AssertIn")

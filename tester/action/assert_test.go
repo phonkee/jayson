@@ -35,6 +35,65 @@ import (
 	"testing"
 )
 
+func TestAssertBetween(t *testing.T) {
+	t.Run("test valid values", func(t *testing.T) {
+		for _, test := range []struct {
+			name   string
+			action Action
+			value  any
+		}{
+			{name: "test positive int", action: AssertBetween(1, 10), value: 5},
+			{name: "test positive int8", action: AssertBetween(int8(1), int8(10)), value: int8(5)},
+			{name: "test positive int16", action: AssertBetween(int16(1), int16(10)), value: int16(5)},
+			{name: "test positive int32", action: AssertBetween(int32(1), int32(10)), value: int32(5)},
+			{name: "test positive int64", action: AssertBetween(int64(1), int64(10)), value: int64(5)},
+			{name: "test negative int", action: AssertBetween(-1000, -400), value: -500},
+			{name: "test negative int8", action: AssertBetween(int8(-100), int8(-50)), value: int8(-75)},
+			{name: "test negative int16", action: AssertBetween(int16(-100), int16(-50)), value: int16(-75)},
+			{name: "test negative int32", action: AssertBetween(int32(-100), int32(-50)), value: int32(-75)},
+			{name: "test negative int64", action: AssertBetween(int64(-100), int64(-50)), value: int64(-75)},
+			{name: "test uint", action: AssertBetween(0, 100), value: 50},
+			{name: "test uint8", action: AssertBetween(uint8(1), uint8(10)), value: uint8(5)},
+			{name: "test uint16", action: AssertBetween(uint16(1), uint16(10)), value: uint16(5)},
+			{name: "test uint32", action: AssertBetween(uint32(1), uint32(10)), value: uint32(5)},
+			{name: "test uint64", action: AssertBetween(uint64(1), uint64(10)), value: uint64(5)},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				m := mocks.NewTestingT(t)
+				require.NoError(t, test.action.Run(m, context.Background(), test.value, nil, nil))
+			})
+		}
+	})
+	t.Run("test invalid values", func(t *testing.T) {
+		for _, test := range []struct {
+			name   string
+			action Action
+			value  any
+		}{
+			{name: "test positive int", action: AssertBetween(1, 10), value: 11},
+			{name: "test positive int8", action: AssertBetween(int8(1), int8(10)), value: int8(11)},
+			{name: "test positive int16", action: AssertBetween(int16(1), int16(10)), value: int16(11)},
+			{name: "test positive int32", action: AssertBetween(int32(1), int32(10)), value: int32(11)},
+			{name: "test positive int64", action: AssertBetween(int64(1), int64(10)), value: int64(11)},
+			{name: "test negative int", action: AssertBetween(-1000, -400), value: -399},
+			{name: "test negative int8", action: AssertBetween(int8(-100), int8(-50)), value: int8(-49)},
+			{name: "test negative int16", action: AssertBetween(int16(-100), int16(-50)), value: int16(-49)},
+			{name: "test negative int32", action: AssertBetween(int32(-100), int32(-50)), value: int32(-49)},
+			{name: "test negative int64", action: AssertBetween(int64(-100), int64(-50)), value: int64(-49)},
+			{name: "test uint", action: AssertBetween(0, 100), value: 101},
+			{name: "test uint8", action: AssertBetween(uint8(1), uint8(10)), value: uint8(11)},
+			{name: "test uint16", action: AssertBetween(uint16(1), uint16(10)), value: uint16(11)},
+			{name: "test uint32", action: AssertBetween(uint32(1), uint32(10)), value: uint32(11)},
+			{name: "test uint64", action: AssertBetween(uint64(1), uint64(10)), value: uint64(11)},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				m := mocks.NewTestingT(t)
+				require.Error(t, test.action.Run(m, context.Background(), test.value, nil, nil))
+			})
+		}
+	})
+}
+
 func TestAssertEquals(t *testing.T) {
 	t.Run("test valid values", func(t *testing.T) {
 		for _, test := range []struct {

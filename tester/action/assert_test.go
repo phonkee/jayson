@@ -94,6 +94,43 @@ func TestAssertBetween(t *testing.T) {
 	})
 }
 
+func TestAssertContains(t *testing.T) {
+	t.Run("test valid values", func(t *testing.T) {
+		for _, test := range []struct {
+			name string
+			sub  string
+			raw  json.RawMessage
+		}{
+			{name: "test string", sub: "hello", raw: json.RawMessage(`{"hello": "world"}`)},
+			{name: "test integer", sub: "123", raw: json.RawMessage(`{"hello": 123}`)},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				ac := AssertContains(test.sub)
+				m := mocks.NewTestingT(t)
+				require.NoError(t, ac.Run(m, context.Background(), nil, test.raw, nil))
+			})
+		}
+	})
+
+	t.Run("test invalid value", func(t *testing.T) {
+		for _, test := range []struct {
+			name string
+			sub  string
+			raw  json.RawMessage
+		}{
+			{name: "test string", sub: "something", raw: json.RawMessage(`{"hello": "world"}`)},
+			{name: "test integer", sub: "42", raw: json.RawMessage(`{"hello": 123}`)},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				ac := AssertContains(test.sub)
+				m := mocks.NewTestingT(t)
+				require.Error(t, ac.Run(m, context.Background(), nil, test.raw, nil))
+			})
+		}
+	})
+
+}
+
 func TestAssertEquals(t *testing.T) {
 	t.Run("test valid values", func(t *testing.T) {
 		for _, test := range []struct {

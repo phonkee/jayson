@@ -60,6 +60,23 @@ func AssertBetween[T constraints.Integer](min, max T) Action {
 	}
 }
 
+// AssertContains asserts value contains the given value
+func AssertContains(contains string) Action {
+	return &actionFunc{
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			if !assert.Contains(&requireTestingT{}, string(raw), contains) {
+				return fmt.Errorf("%w: expected %s to contain %s", ErrActionAssertContains, string(raw), contains)
+			}
+			return nil
+		},
+		support:   []Support{SupportHeader, SupportJson},
+		baseError: ErrActionAssertContains,
+	}
+}
+
 // AssertEquals asserts that given value is equal to the value in the response
 func AssertEquals(value any) Action {
 	return &actionFunc{

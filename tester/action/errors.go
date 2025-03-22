@@ -67,4 +67,5 @@ var (
 	ErrActionUnmarshal           = newErrAction("Unmarshal")
 	ErrActionUnmarshalObjectKeys = newErrAction("UnmarshalObjectKeys")
 	ErrActionAssertNot           = newErrAction("AssertNot")
+	ErrActionAssertContains      = newErrAction("AssertContains")
 )

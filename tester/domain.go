@@ -99,3 +99,8 @@ const (
 type RoundTripper interface {
 	http.RoundTripper
 }
+
+const (
+	// RootPath is the root path for Response Json call
+	RootPath string = ""
+)

@@ -102,6 +102,10 @@ func TestTester(t *testing.T) {
 
 ```
 
+# TODO
+
+- [ ] AssertGt, AssertGte, AssertLt, AssertLte should accept also float64 and float32
+
 # Author
 
 Peter Vrba <phonkee@phonkee.eu>

@@ -31,22 +31,14 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+// Support is a type that represents the support level of an action.
 type Support int
 
+// Support levels for actions.
 const (
 	SupportHeader Support = iota
 	SupportJson
 	SupportStatus
-)
-
-// Number constraint for number types
-type Number interface {
-	constraints.Integer | constraints.Float
-}
-
-const (
-	// RootPath is the root path for Json call.
-	RootPath string = ""
 )
 
 // Action is an action that can be performed on the response. It has currently 2 meanings: Assertion and Unmarshal.
@@ -70,3 +62,8 @@ type unmarshalActionValueFunc = func(t require.TestingT, raw json.RawMessage, a 
 
 // nullRawMessage is a raw message that represents a null value in JSON.
 var nullRawMessage = json.RawMessage("null")
+
+// Number constraint for number types
+type Number interface {
+	constraints.Integer | constraints.Float
+}

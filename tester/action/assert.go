@@ -48,6 +48,8 @@ func AssertEquals(value any) Action {
 				return err
 			}
 
+			// special case for json.RawMessage
+			// we call json eq to compare the values correctly
 			if reflect.TypeOf(v) == reflect.TypeOf(json.RawMessage{}) {
 				if !assert.JSONEq(&requireTestingT{}, string(v.(json.RawMessage)), string(raw)) {
 					return fmt.Errorf("%w, expected: %#v, got: %#v", ErrActionAssertEquals, value, v)
@@ -169,6 +171,52 @@ func AssertKeys(keys ...string) Action {
 
 			if !assert.ObjectsAreEqual(keys, found) {
 				return fmt.Errorf("%w: expected keys %#v, got %#v", ErrActionAssertKeys, keys, found)
+			}
+			return nil
+		},
+		support:   []Support{SupportJson},
+		baseError: ErrActionAssertKeys,
+	}
+}
+
+// AssertKeysIn asserts that given map has the given keys
+func AssertKeysIn(keys ...string) Action {
+	return &actionFunc{
+		value: func(t require.TestingT) (any, bool) {
+			return map[string]any{}, true
+		},
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			var valueMap map[string]any
+			if v == nil {
+				valueMap = make(map[string]any)
+			}
+			if cast, ok := v.(map[string]any); ok {
+				valueMap = cast
+			}
+
+			// collect all the keys from the map
+			found := make([]string, 0, len(keys))
+			for key := range valueMap {
+				found = append(found, key)
+			}
+
+			var isThere bool
+
+		outer:
+			for _, f := range found {
+				for _, k := range keys {
+					if assert.ObjectsAreEqual(f, k) {
+						isThere = true
+						break outer
+					}
+				}
+			}
+
+			if !isThere {
+				return fmt.Errorf("%w: expected keys %#v be in %#v", ErrActionAssertKeys, found, keys)
 			}
 			return nil
 		},

@@ -35,6 +35,92 @@ import (
 	"testing"
 )
 
+func TestAssertEquals(t *testing.T) {
+	t.Run("test valid values", func(t *testing.T) {
+		for _, test := range []struct {
+			name   string
+			expect any
+			value  any
+		}{
+			{name: "test string", expect: "hello", value: "hello"},
+			{name: "test int", expect: 42, value: 42},
+			{name: "test uint", expect: uint(42), value: uint(42)},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				ae := AssertEquals(test.expect)
+				m := mocks.NewTestingT(t)
+				require.NoError(t, ae.Run(m, context.Background(), test.value, nil, nil))
+			})
+		}
+
+	})
+
+	t.Run("test invalid value", func(t *testing.T) {
+		for _, test := range []struct {
+			name          string
+			expect        any
+			value         any
+			errIn         error
+			errorContains string
+		}{
+			{name: "test invalid value", expect: "hello", value: "world", errIn: nil, errorContains: "action: `AssertEquals`, expected: \"hello\", got: \"world\""},
+			{name: "test passed error", expect: 42, value: 43, errIn: ErrNotPresent, errorContains: "not present"},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				ae := AssertEquals(test.expect)
+				m := mocks.NewTestingT(t)
+				err := ae.Run(m, context.Background(), test.value, nil, test.errIn)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), test.errorContains)
+			})
+		}
+
+	})
+
+}
+
+func TestAssertKeysIn(t *testing.T) {
+	t.Run("test valid values", func(t *testing.T) {
+		// Test cases for AssertKeysIn
+		tests := []struct {
+			name  string
+			value map[string]any
+			keys  []string
+		}{
+			{name: "test subset", value: map[string]any{"a": 1, "b": 2}, keys: []string{"a"}},
+			{name: "test other", value: map[string]any{"a": 1, "b": 2}, keys: []string{"b"}},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				aak := AssertKeysIn(test.keys...)
+				m := mocks.NewTestingT(t)
+				require.NoError(t, aak.Run(m, context.Background(), test.value, nil, nil))
+			})
+		}
+
+	})
+	t.Run("test invalid values", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			value map[string]any
+			keys  []string
+		}{
+			{name: "test non existing", value: map[string]any{"a": 1, "b": 2}, keys: []string{"c"}},
+			{name: "test non existing 2", value: map[string]any{"a": 1, "b": 2}, keys: []string{"e"}},
+			{name: "test nil", value: nil, keys: []string{"e"}},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				aak := AssertKeysIn(test.keys...)
+				m := mocks.NewTestingT(t)
+				require.Error(t, aak.Run(m, context.Background(), test.value, nil, nil))
+			})
+		}
+	})
+}
+
 func TestAssertZero(t *testing.T) {
 	t.Run("test valid values", func(t *testing.T) {
 		// Test cases for AssertZero

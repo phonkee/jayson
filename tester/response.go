@@ -122,6 +122,7 @@ func (r *response) Header(t require.TestingT, key string, a action.Action) APIRe
 
 	// now run action
 	if err := a.Run(t, ctx, value, raw, err); err != nil {
+		// TODO: check if we have action error, otherwise we need to add it somehow
 		require.Fail(t, fmt.Sprintf("FAILED: `response.Header`, name: `%s`, %v", key, err.Error()))
 	}
 
@@ -197,6 +198,7 @@ main:
 
 	// now run action
 	if errRun := a.Run(t, ctx, value, raw, err); errRun != nil {
+		// TODO: check if we have action error, otherwise we need to add it somehow
 		require.Fail(t, fmt.Sprintf("FAILED: `response.Json`, path: `%s`, %v", path, errRun.Error()))
 	}
 
@@ -223,6 +225,7 @@ func (r *response) Status(t require.TestingT, a action.Action) APIResponse {
 
 	// now call a.Run
 	if err := a.Run(t, ctx, value, raw, err); err != nil {
+		// TODO: check if we have action error, otherwise we need to add it somehow
 		require.NoError(t, err)
 	}
 

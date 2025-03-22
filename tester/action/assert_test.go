@@ -28,7 +28,9 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/phonkee/jayson/tester/mocks"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"regexp"
 	"strconv"
 	"testing"
 )
@@ -116,6 +118,90 @@ func TestAssertNotZero(t *testing.T) {
 				ass := AssertNotZero()
 				m := mocks.NewTestingT(t)
 				require.NoError(m, ass.Run(m, context.Background(), nil, test.input, nil))
+			})
+		}
+	})
+}
+
+func TestAssertRegexMatch(t *testing.T) {
+	t.Run("test valid values", func(t *testing.T) {
+		for _, item := range []struct {
+			name    string
+			input   json.RawMessage
+			pattern *regexp.Regexp
+		}{
+			{
+				name:    "match regex",
+				input:   json.RawMessage(`200`),
+				pattern: regexp.MustCompile(`2\d+`),
+			},
+		} {
+			t.Run(item.name, func(t *testing.T) {
+				ar := AssertRegexMatch(item.pattern)
+				assert.NoError(t, ar.Run(t, context.Background(), nil, item.input, nil))
+			})
+
+		}
+
+	})
+	t.Run("test invalid values", func(t *testing.T) {
+		for _, item := range []struct {
+			name    string
+			input   json.RawMessage
+			pattern *regexp.Regexp
+		}{
+			{
+				name:    "match regex",
+				input:   json.RawMessage(`hello`),
+				pattern: regexp.MustCompile(`2\d+`),
+			},
+		} {
+			t.Run(item.name, func(t *testing.T) {
+				ar := AssertRegexMatch(item.pattern)
+				assert.Error(t, ar.Run(t, context.Background(), nil, item.input, nil))
+			})
+		}
+	})
+}
+
+func TestAssertRegexSearch(t *testing.T) {
+	t.Run("test valid values", func(t *testing.T) {
+		for _, item := range []struct {
+			name    string
+			input   json.RawMessage
+			pattern *regexp.Regexp
+			count   int
+		}{
+			{
+				name:    "match regex",
+				input:   json.RawMessage(`123`),
+				pattern: regexp.MustCompile(`\d`),
+				count:   2,
+			},
+		} {
+			t.Run(item.name, func(t *testing.T) {
+				ar := AssertRegexSearch(item.pattern, item.count)
+				assert.Error(t, ar.Run(t, context.Background(), nil, item.input, nil))
+			})
+		}
+	})
+	t.Run("test invalid values", func(t *testing.T) {
+		for _, item := range []struct {
+			name    string
+			input   json.RawMessage
+			pattern *regexp.Regexp
+			count   int
+		}{
+			{
+				name:    "match regex",
+				input:   json.RawMessage(`123`),
+				pattern: regexp.MustCompile(`\d`),
+				count:   2,
+			},
+		} {
+			t.Run(item.name, func(t *testing.T) {
+				ar := AssertRegexSearch(item.pattern, item.count)
+				assert.Error(t, ar.Run(t, context.Background(), nil, item.input, nil))
 			})
 		}
 	})

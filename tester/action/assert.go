@@ -343,7 +343,7 @@ func AssertRegexMatch(pattern *regexp.Regexp) Action {
 	}
 }
 
-// AssertRegexSearch asserts that given regular expression searches the value in the response
+// AssertRegexSearch asserts that given regular expression is found given number of times
 func AssertRegexSearch(pattern *regexp.Regexp, count int) Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {

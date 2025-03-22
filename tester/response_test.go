@@ -25,6 +25,7 @@
 package tester
 
 import (
+	"bytes"
 	"encoding/json"
 	"github.com/phonkee/jayson/tester/action"
 	"github.com/phonkee/jayson/tester/mocks"
@@ -821,5 +822,25 @@ func TestResponse_Unmarshal(t *testing.T) {
 			assert.Equal(t, item.expected, user)
 		})
 	}
+
+}
+
+func TestResponse_Print(t *testing.T) {
+	rw := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := newResponse(rw, req)
+	r.body = []byte(`{"name": "John"}`)
+
+	into := &bytes.Buffer{}
+	r.Print(into)
+
+	result := into.String()
+	assert.Contains(t, result, "Request:")
+	assert.Contains(t, result, "    URL: /")
+	assert.Contains(t, result, "    Method: GET")
+	assert.Contains(t, result, "    Header: map[]")
+	assert.Contains(t, result, "Response:")
+	assert.Contains(t, result, "    Body: {\"name\": \"John\"}")
+	assert.Contains(t, result, "    Status: 200")
 
 }

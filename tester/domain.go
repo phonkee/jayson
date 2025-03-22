@@ -29,6 +29,7 @@ import (
 	"github.com/phonkee/jayson/tester/action"
 	"github.com/phonkee/jayson/tester/resolver"
 	"github.com/stretchr/testify/require"
+	"io"
 	"net/http"
 )
 
@@ -73,6 +74,10 @@ type APIRequest interface {
 
 // APIResponse is the interface for testing the rest APIClient response
 type APIResponse interface {
+
+	// Print the response to stdout
+	Print(writer io.Writer) APIResponse
+
 	// Header asserts that response header action is equal to given action
 	Header(t require.TestingT, key string, action action.Action) APIResponse
 

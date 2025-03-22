@@ -33,6 +33,7 @@ import (
 	"github.com/phonkee/jayson/tester/action"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -53,6 +54,24 @@ type response struct {
 	rw      *httptest.ResponseRecorder
 	request *http.Request
 	body    []byte
+}
+
+// Print prints whole response
+func (r *response) Print(writer io.Writer) APIResponse {
+	printf := func(format string, args ...any) {
+		_, _ = fmt.Fprintf(writer, format, args...)
+	}
+	printf("Request:\n")
+	printf("    URL: %v\n", r.request.URL.String())
+	printf("    Method: %v\n", r.request.Method)
+	printf("    Header: %v\n", r.request.Header)
+	printf("Response:\n")
+	printf("    Body: %v\n", string(r.body))
+	printf("    Status: %v\n", r.rw.Code)
+	printf("    Header: %v\n", r.rw.Header())
+	printf("    Size: %v\n", r.rw.Body.Len())
+
+	return r
 }
 
 // Header runs action against given header key

@@ -155,7 +155,7 @@ main:
 
 			// check if the number is in bounds
 			if int(number) >= len(arr) {
-				err = fmt.Errorf("out of bounds")
+				err = fmt.Errorf("%w: out of bounds", action.ErrNotPresent)
 				break main
 			}
 

@@ -39,10 +39,14 @@ type actionFunc struct {
 	baseError    error
 }
 
+// BaseError returns the base error for the action
 func (a *actionFunc) BaseError() error {
 	return a.baseError
 }
 
+// Supports returns true if the action supports the given type
+// If supportsFunc is set, it will be used to determine if the action supports the given type
+// this is used to support custom types
 func (a *actionFunc) Supports(what Support) bool {
 	if a.supportsFunc != nil {
 		return a.supportsFunc(what)
@@ -55,6 +59,7 @@ func (a *actionFunc) Supports(what Support) bool {
 	return false
 }
 
+// Value calls the value function if it is set
 func (a *actionFunc) Value(t require.TestingT) (any, bool) {
 	if a.value != nil {
 		return a.value(t)
@@ -62,6 +67,7 @@ func (a *actionFunc) Value(t require.TestingT) (any, bool) {
 	return nil, false
 }
 
+// Run calls the run function if it is set
 func (a *actionFunc) Run(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
 	if a.run != nil {
 		return a.run(t, ctx, value, raw, err)

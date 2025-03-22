@@ -44,6 +44,11 @@ type Number interface {
 	constraints.Integer | constraints.Float
 }
 
+const (
+	// RootPath is the root path for Json call.
+	RootPath string = ""
+)
+
 // Action is an action that can be performed on the response. It has currently 2 meanings: Assertion and Unmarshal.
 // TODO: add path or id to run so we can print better error messages?
 type Action interface {
@@ -51,11 +56,6 @@ type Action interface {
 	Value(t require.TestingT) (any, bool)
 	Supports(support Support) bool
 	BaseError() error
-}
-
-// actionNegate is a special action that has custom handling for negation.
-type actionNegate interface {
-	Run(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error
 }
 
 type contextKey int

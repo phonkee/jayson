@@ -331,6 +331,7 @@ func (l *length) UnmarshalJSON(b []byte) error {
 }
 
 // AssertNot asserts that given action does not succeed, otherwise it fails
+// This assertion does not need any special handling, it just relies on correct errors (ErrAction, ErrNotPresent)
 func AssertNot(a Action) Action {
 	return &actionFunc{
 		value: func(t require.TestingT) (any, bool) {

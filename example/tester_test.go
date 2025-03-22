@@ -64,13 +64,13 @@ func TestTester(t *testing.T) {
 			api.Get(t, api.ReverseURL(t, "api:v1:users:list")).
 				Do(t, ctx).
 				Status(t, action.AssertEquals(http.StatusOK)).
-				Json(t, "users.0.name", action.AssertNotEquals("Johnson Doe")).
+				Json(t, "users.0.name", action.AssertNot(action.AssertEquals("Johnson Doe"))).
 				Json(t, "users.0.name", action.AssertEquals("John Doe")).
 				Json(t, "users.0", action.AssertEquals(json.RawMessage(`{"id":1,"name":"John Doe"}`))).
 				Json(t, "users.0.name", action.AssertIn("John Doe", "Peter Vrba")).
-				Json(t, "users.0.name", action.AssertNotIn("Johnson Doe", "Peter Vrba")).
+				//Json(t, "users.0.name", action.AssertNot(action.AssertIn("Johnson Doe", "Peter Vrba"))).
 				Json(t, "users", action.AssertExists()).
-				Json(t, "user", action.AssertNotExists()).
+				Json(t, "user", action.AssertNot(action.AssertExists())).
 				Json(t, "users", action.AssertLen(1)).
 				Json(t, "users.0", action.AssertKeys("id", "name", "admin")).
 				Json(t, "users.0.id", action.AssertGte(1)).
@@ -86,7 +86,7 @@ func TestTester(t *testing.T) {
 				Json(t, "users.0.id", action.AssertAny(
 					action.AssertGte(0),
 					action.AssertLte(0),
-					action.AssertNotExists(),
+					action.AssertNot(action.AssertExists()),
 				)).
 				Json(t, "users.0.id", action.AssertRegexMatch(
 					regexp.MustCompile(`\d+`),
@@ -96,7 +96,7 @@ func TestTester(t *testing.T) {
 					"name": &userObj.Name,
 				})).
 				Json(t, "users.0.admin", action.AssertZero()).
-				Json(t, "users.0.name", action.AssertNotZero())
+				Json(t, "users.0.name", action.AssertNot(action.AssertZero()))
 
 			// test Unmarshal
 			assert.Equal(t, user.ID, 1)

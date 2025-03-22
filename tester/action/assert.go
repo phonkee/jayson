@@ -27,6 +27,7 @@ package action
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,6 +70,9 @@ func AssertExists() Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
+				if errors.Is(err, ErrNotPresent) {
+					return fmt.Errorf("%w: expected value to exist, but it does not", ErrActionAssertExists)
+				}
 				return err
 			}
 			if raw == nil {
@@ -234,91 +238,6 @@ func AssertLte[T constraints.Integer](value T) Action {
 	}
 }
 
-// AssertNotEquals asserts that given value is not equal to the value in the response
-func AssertNotEquals(value any) Action {
-	return &actionFunc{
-		value: func(t require.TestingT) (any, bool) {
-			return value, true
-		},
-		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
-			if err != nil {
-				return err
-			}
-			if reflect.TypeOf(v) == reflect.TypeOf(json.RawMessage{}) {
-				stringValue := string(value.(json.RawMessage))
-				if assert.JSONEq(&requireTestingT{}, string(v.(json.RawMessage)), string(raw)) {
-					return fmt.Errorf("%w: expected value to not be equal to %v", ErrActionAssertNotEquals, stringValue)
-				}
-			} else {
-				if assert.ObjectsAreEqual(v, value) {
-					return fmt.Errorf("%w: expected value to not be equal to %#v", ErrActionAssertNotEquals, value)
-				}
-			}
-			return nil
-		},
-		support:   []Support{SupportHeader, SupportJson, SupportStatus},
-		baseError: ErrActionAssertNotEquals,
-	}
-}
-
-// AssertNotExists asserts that the value does not exist in the response based on given argument
-func AssertNotExists() Action {
-	return &actionFunc{
-		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
-			if err != nil {
-				return nil
-			}
-			if raw != nil {
-				return fmt.Errorf("%w: expected value to not exist, but it does", ErrActionAssertNotExists)
-			}
-			return nil
-		},
-		support:   []Support{SupportHeader, SupportJson},
-		baseError: ErrActionAssertNotExists,
-	}
-}
-
-// AssertNotIn asserts that value is not in the given list of values
-func AssertNotIn[T any](values ...T) Action {
-	return &actionFunc{
-		value: func(t require.TestingT) (any, bool) {
-			return values[0], true
-		},
-		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
-			if err != nil {
-				return err
-			}
-			ok, found := containsElement(values, v)
-			if !ok || !found {
-				return nil
-			}
-			return fmt.Errorf("%w: expected value %#v to not be in %#v", ErrActionAssertNotIn, v, values)
-		},
-		support:   []Support{SupportHeader, SupportJson, SupportStatus},
-		baseError: ErrActionAssertNotIn,
-	}
-}
-
-// AssertNotZero asserts that given value is not zero
-func AssertNotZero() Action {
-	return &actionFunc{
-		run: func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
-			if err != nil {
-				return err
-			}
-
-			for _, zeroValue := range zeroValues {
-				if assert.JSONEq(&requireTestingT{}, string(zeroValue), string(raw)) {
-					return fmt.Errorf("%w: expected value to not be zero, got %#v", ErrAction, raw)
-				}
-			}
-
-			return nil
-		},
-		support: []Support{SupportHeader, SupportJson},
-	}
-}
-
 // AssertRegexMatch asserts that given value matches the regex in the response
 // if count provided it will check for the number of matches,
 // otherwise it will check if the value matches the regex
@@ -409,4 +328,28 @@ func (l *length) UnmarshalJSON(b []byte) error {
 	}
 
 	return nil
+}
+
+// AssertNot asserts that given action does not succeed, otherwise it fails
+func AssertNot(a Action) Action {
+	return &actionFunc{
+		value: func(t require.TestingT) (any, bool) {
+			return a.Value(t)
+		},
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			// run the provided action
+			runErr := a.Run(t, ctx, v, raw, err)
+
+			// check for error
+			if runErr != nil {
+				if errors.Is(runErr, ErrAction) {
+					return nil
+				}
+				return fmt.Errorf("expected action to fail, but it did not: %w", runErr)
+			}
+			return fmt.Errorf("expected action to fail, but it did not")
+		},
+		supportsFunc: a.Supports,
+		baseError:    ErrActionAssertNot,
+	}
 }

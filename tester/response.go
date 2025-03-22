@@ -100,7 +100,7 @@ func (r *response) Header(t require.TestingT, key string, a action.Action) APIRe
 			raw = buffer.Bytes()
 		}
 	} else {
-		err = fmt.Errorf("header not present")
+		err = action.ErrNotPresent
 	}
 
 	// context instance
@@ -173,7 +173,7 @@ main:
 
 		// check if object contains the part
 		if raw, ok = obj[part]; !ok {
-			err = fmt.Errorf("not present")
+			err = action.ErrNotPresent
 			break main
 		}
 	}
@@ -194,8 +194,8 @@ main:
 	}
 
 	// now run action
-	if err := a.Run(t, ctx, value, raw, err); err != nil {
-		require.Fail(t, fmt.Sprintf("FAILED: `response.Json`, path: `%s`, %v", path, err.Error()))
+	if errRun := a.Run(t, ctx, value, raw, err); errRun != nil {
+		require.Fail(t, fmt.Sprintf("FAILED: `response.Json`, path: `%s`, %v", path, errRun.Error()))
 	}
 
 	return r

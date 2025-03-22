@@ -32,19 +32,23 @@ import (
 
 // actionFunc is a helper to create actions from functions
 type actionFunc struct {
-	run       func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error
-	value     func(t require.TestingT) (any, bool)
-	support   []Support
-	baseError error
+	run          func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error
+	value        func(t require.TestingT) (any, bool)
+	support      []Support
+	supportsFunc func(supports Support) bool
+	baseError    error
 }
 
 func (a *actionFunc) BaseError() error {
 	return a.baseError
 }
 
-func (a *actionFunc) Supports(support Support) bool {
+func (a *actionFunc) Supports(what Support) bool {
+	if a.supportsFunc != nil {
+		return a.supportsFunc(what)
+	}
 	for _, s := range a.support {
-		if s == support {
+		if s == what {
 			return true
 		}
 	}

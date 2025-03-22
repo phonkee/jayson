@@ -94,7 +94,7 @@ func TestAssertNotZero(t *testing.T) {
 
 		for i, test := range tests {
 			t.Run(strconv.Itoa(i), func(t *testing.T) {
-				ass := AssertNotZero()
+				ass := AssertNot(AssertZero())
 				m := mocks.NewTestingT(t)
 				require.Error(t, ass.Run(m, context.Background(), nil, test.input, nil))
 			})
@@ -115,7 +115,7 @@ func TestAssertNotZero(t *testing.T) {
 
 		for i, test := range tests {
 			t.Run(strconv.Itoa(i), func(t *testing.T) {
-				ass := AssertNotZero()
+				ass := AssertNot(AssertZero())
 				m := mocks.NewTestingT(t)
 				require.NoError(m, ass.Run(m, context.Background(), nil, test.input, nil))
 			})

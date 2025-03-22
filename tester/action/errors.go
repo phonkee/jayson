@@ -64,4 +64,6 @@ var (
 	ErrActionAssertRegexSearch   = newErrAction("ErrActionAssertRegexSearch")
 	ErrActionUnmarshal           = newErrAction("Unmarshal")
 	ErrActionUnmarshalObjectKeys = newErrAction("UnmarshalObjectKeys")
+	ErrActionAssertNot           = newErrAction("AssertNot")
+	ErrNotPresent                = errors.New("not present")
 )

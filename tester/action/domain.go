@@ -53,6 +53,11 @@ type Action interface {
 	BaseError() error
 }
 
+// actionNegate is a special action that has custom handling for negation.
+type actionNegate interface {
+	Run(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error
+}
+
 type contextKey int
 
 const (

@@ -326,6 +326,28 @@ func AssertLte[T constraints.Integer](value T) Action {
 	}
 }
 
+var nullRawMessage = json.RawMessage("null")
+
+// AssertNil asserts that given value is nil
+func AssertNil() Action {
+	return &actionFunc{
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			if raw == nil {
+				return fmt.Errorf("%w: value missing", ErrActionAssertNil)
+			}
+			if !assert.Equal(&requireTestingT{}, nullRawMessage, raw) {
+				return fmt.Errorf("%w: expected value to be nil, got %#v", ErrActionAssertNil, string(raw))
+			}
+			return nil
+		},
+		support:   []Support{SupportHeader, SupportJson},
+		baseError: ErrActionAssertNil,
+	}
+}
+
 // AssertRegexMatch asserts that given value matches the regex in the response
 // if count provided it will check for the number of matches,
 // otherwise it will check if the value matches the regex

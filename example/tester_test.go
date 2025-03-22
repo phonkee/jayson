@@ -68,7 +68,7 @@ func TestTester(t *testing.T) {
 				Json(t, "users.0.name", action.AssertEquals("John Doe")).
 				Json(t, "users.0", action.AssertEquals(json.RawMessage(`{"id":1,"name":"John Doe"}`))).
 				Json(t, "users.0.name", action.AssertIn("John Doe", "Peter Vrba")).
-				//Json(t, "users.0.name", action.AssertNot(action.AssertIn("Johnson Doe", "Peter Vrba"))).
+				Json(t, "users.0.name", action.AssertNot(action.AssertIn("Johnson Doe", "Peter Vrba"))).
 				Json(t, "users", action.AssertExists()).
 				Json(t, "user", action.AssertNot(action.AssertExists())).
 				Json(t, "users", action.AssertLen(1)).

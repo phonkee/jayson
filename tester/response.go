@@ -70,13 +70,15 @@ func (r *response) Print(writer ...io.Writer) APIResponse {
 	printf := func(format string, args ...any) {
 		_, _ = fmt.Fprintf(w, format+"\n", args...)
 	}
-	printf("Request:")
+	printf("Print:")
+	printf("  Request:")
 	printf("    URL: %v", r.request.URL.String())
 	printf("    Method: %v", r.request.Method)
 	printf("    Header: %v", r.request.Header)
-	printf("Response:")
+	printf("  Response:")
 	printf("    Body: %v", string(r.body))
 	printf("    Status: %v", r.rw.Code)
+	printf("    StatusMessage: %v", http.StatusText(r.rw.Code))
 	printf("    Header: %v", r.rw.Header())
 	printf("    Size: %v", r.rw.Body.Len())
 

@@ -848,7 +848,8 @@ func TestResponse_Unmarshal(t *testing.T) {
 
 func TestResponse_Print(t *testing.T) {
 	rw := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/?q=hello", nil)
+	req.Header.Set("hello", "world")
 	r := newResponse(rw, req)
 	r.body = []byte(`{"name": "John"}`)
 
@@ -856,12 +857,8 @@ func TestResponse_Print(t *testing.T) {
 	r.Print(into)
 
 	result := into.String()
-	assert.Contains(t, result, "Request:")
-	assert.Contains(t, result, "    URL: /")
-	assert.Contains(t, result, "    Method: GET")
-	assert.Contains(t, result, "    Header: map[]")
-	assert.Contains(t, result, "Response:")
-	assert.Contains(t, result, "    Body: {\"name\": \"John\"}")
-	assert.Contains(t, result, "    Status: 200")
 
+	// assert what was written
+	assert.Contains(t, result, "Request:\n    URL: /?q=hello\n    Method: GET\n    Header: map[Hello:[world]]")
+	assert.Contains(t, result, "Response:\n    Body: {\"name\": \"John\"}\n    Status: 200\n    StatusMessage: OK\n    Header: map[]\n    Size: 0")
 }

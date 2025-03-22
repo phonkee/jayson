@@ -25,46 +25,56 @@
 package action
 
 import (
-	"context"
+	"bytes"
 	"encoding/json"
-	"fmt"
-	"github.com/stretchr/testify/require"
-	"io"
-	"os"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-// Print is an action that prints the value and error to the given writer.
-// By default, it prints to os.Stdout.
-func Print(target ...io.Writer) Action {
-	var w io.Writer
-	if len(target) > 0 && target[0] != nil {
-		w = target[0]
-	} else {
-		w = os.Stdout
-	}
-	// printf is a helper function to print formatted output and ignore errors
-	printf := func(format string, args ...any) {
-		_, _ = fmt.Fprintf(w, format+"\n", args...)
-	}
-	return &actionFunc{
-		run: func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
-			printf("Print:")
-			if err != nil {
-				printf("  Error: %v", err)
-				return err
-			}
-			if value != nil {
-				printf("  Value[%T]: %v", value, value)
-			}
-			if raw != nil {
-				printf("  Raw: %v", string(raw))
-			}
-			if value == nil && raw == nil {
-				printf("  <nil>")
-			}
-
-			return nil
+func TestPrint(t *testing.T) {
+	for _, item := range []struct {
+		name   string
+		value  any
+		raw    json.RawMessage
+		expect []string
+	}{
+		{
+			name: "test empty value",
+			raw:  json.RawMessage(`{}`),
+			expect: []string{
+				"Raw: {}",
+			},
 		},
-		support: []Support{SupportHeader, SupportJson, SupportStatus},
+		{
+			name:  "test value",
+			value: "hello",
+			raw:   json.RawMessage(`{}`),
+			expect: []string{
+				"Value[string]: hello\n  Raw: {}",
+			},
+		},
+		{
+			name:  "test empty raw",
+			value: "hello",
+			expect: []string{
+				"Value[string]: hello",
+			},
+		},
+		{
+			name: "test empty raw and empty value",
+			expect: []string{
+				"<nil>",
+			},
+		},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			w := &bytes.Buffer{}
+			ap := Print(w)
+			assert.NoError(t, ap.Run(t, nil, item.value, item.raw, nil))
+			got := w.String()
+			for _, exp := range item.expect {
+				assert.Contains(t, got, exp)
+			}
+		})
 	}
 }

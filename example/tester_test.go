@@ -38,14 +38,15 @@ import (
 )
 
 type User struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Admin bool   `json:"admin"`
 }
 
 func ListUsers(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write([]byte(`{"users": [{"id":1,"name":"John Doe"}]}`))
+	_, _ = w.Write([]byte(`{"users": [{"id":1,"name":"John Doe", "admin": false}]}`))
 }
 
 func TestTester(t *testing.T) {
@@ -71,7 +72,7 @@ func TestTester(t *testing.T) {
 				Json(t, "users", action.AssertExists()).
 				Json(t, "user", action.AssertNotExists()).
 				Json(t, "users", action.AssertLen(1)).
-				Json(t, "users.0", action.AssertKeys("id", "name")).
+				Json(t, "users.0", action.AssertKeys("id", "name", "admin")).
 				Json(t, "users.0.id", action.AssertGte(1)).
 				Json(t, "users.0.id", action.AssertGt(0)).
 				Json(t, "users.0.id", action.AssertLt(2)).
@@ -93,7 +94,9 @@ func TestTester(t *testing.T) {
 				Json(t, "users.0", action.UnmarshalObjectKeys(action.KV{
 					"id":   &userObj.ID,
 					"name": &userObj.Name,
-				}))
+				})).
+				Json(t, "users.0.admin", action.AssertZero()).
+				Json(t, "users.0.name", action.AssertNotZero())
 
 			// test Unmarshal
 			assert.Equal(t, user.ID, 1)

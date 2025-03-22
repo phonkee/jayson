@@ -76,7 +76,7 @@ type APIRequest interface {
 type APIResponse interface {
 
 	// Print the response to stdout
-	Print(writer io.Writer) APIResponse
+	Print(writer ...io.Writer) APIResponse
 
 	// Header asserts that response header action is equal to given action
 	Header(t require.TestingT, key string, action action.Action) APIResponse

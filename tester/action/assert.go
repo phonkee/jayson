@@ -325,6 +325,69 @@ func AssertRegex(pattern *regexp.Regexp, count ...int) Action {
 	}
 }
 
+type zeroValue json.RawMessage
+
+var (
+	zeroValueNumeric zeroValue = zeroValue("0")
+	zeroValueString            = zeroValue(`""`)
+	zeroValueBool    zeroValue = zeroValue("false")
+	zeroValueArray   zeroValue = zeroValue("[]")
+	zeroValueStruct  zeroValue = zeroValue("{}")
+	zeroValueNil     zeroValue = zeroValue("null")
+
+	// zeroValues is a list of all zero values
+	zeroValues = []zeroValue{
+		zeroValueNumeric,
+		zeroValueString,
+		zeroValueBool,
+		zeroValueArray,
+		zeroValueStruct,
+		zeroValueNil,
+	}
+)
+
+// AssertZero asserts that given value is zero
+func AssertZero() Action {
+	return &actionFunc{
+		run: func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+
+			for _, zeroValue := range zeroValues {
+				if assert.JSONEq(&requireTestingT{}, string(zeroValue), string(raw)) {
+					return nil
+				}
+			}
+
+			return fmt.Errorf("%w: expected value to be zero, got %#v", ErrAction, raw)
+
+		},
+
+		support: []Support{SupportHeader, SupportJson},
+	}
+}
+
+// AssertNotZero asserts that given value is not zero
+func AssertNotZero() Action {
+	return &actionFunc{
+		run: func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+
+			for _, zeroValue := range zeroValues {
+				if assert.JSONEq(&requireTestingT{}, string(zeroValue), string(raw)) {
+					return fmt.Errorf("%w: expected value to not be zero, got %#v", ErrAction, raw)
+				}
+			}
+
+			return nil
+		},
+		support: []Support{SupportHeader, SupportJson},
+	}
+}
+
 // length type to handle the length of a slice or map
 type length int
 

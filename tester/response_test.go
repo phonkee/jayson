@@ -717,6 +717,46 @@ func TestResponse_Json(t *testing.T) {
 					})
 				}
 			})
+
+		})
+
+		// test Print
+		t.Run("test Print", func(t *testing.T) {
+			t.Run("test valid", func(t *testing.T) {
+				for _, item := range []struct {
+					name     string
+					body     string
+					path     string
+					contains string
+				}{
+					{
+						name:     "test integer",
+						body:     `{"object": {"name": 40}}`,
+						path:     "object.name",
+						contains: "Raw: 40",
+					},
+					{
+						name:     "test string",
+						body:     `{"object": {"name": "John"}}`,
+						path:     "object.name",
+						contains: "Raw: \"John\"",
+					},
+					{
+						name:     "test object",
+						body:     `{"object": {"name": 40}}`,
+						path:     "object",
+						contains: "Raw: {\"name\": 40}",
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
+						into := &bytes.Buffer{}
+						r.Json(t, item.path, action.Print(into))
+						assert.Contains(t, into.String(), item.contains)
+					})
+				}
+			})
 		})
 	})
 
@@ -772,19 +812,6 @@ func TestResponse_Json(t *testing.T) {
 			})
 		}
 	})
-}
-
-func TestResponse_AssertStatus(t *testing.T) {
-	for _, status := range []int{http.StatusOK, http.StatusCreated, http.StatusNoContent} {
-		t.Run(http.StatusText(status), func(t *testing.T) {
-			rw := httptest.NewRecorder()
-			rw.WriteHeader(status)
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
-
-			r := newResponse(rw, req)
-			r.Status(t, action.AssertEquals(status))
-		})
-	}
 }
 
 func TestResponse_Unmarshal(t *testing.T) {

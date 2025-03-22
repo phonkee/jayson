@@ -36,6 +36,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -57,19 +58,27 @@ type response struct {
 }
 
 // Print prints whole response
-func (r *response) Print(writer io.Writer) APIResponse {
-	printf := func(format string, args ...any) {
-		_, _ = fmt.Fprintf(writer, format, args...)
+func (r *response) Print(writer ...io.Writer) APIResponse {
+	var w io.Writer
+	if len(writer) > 0 && writer[0] != nil {
+		w = writer[0]
+	} else {
+		w = os.Stdout
 	}
-	printf("Request:\n")
-	printf("    URL: %v\n", r.request.URL.String())
-	printf("    Method: %v\n", r.request.Method)
-	printf("    Header: %v\n", r.request.Header)
-	printf("Response:\n")
-	printf("    Body: %v\n", string(r.body))
-	printf("    Status: %v\n", r.rw.Code)
-	printf("    Header: %v\n", r.rw.Header())
-	printf("    Size: %v\n", r.rw.Body.Len())
+
+	// printf is a helper function to print formatted output and ignore errors
+	printf := func(format string, args ...any) {
+		_, _ = fmt.Fprintf(w, format+"\n", args...)
+	}
+	printf("Request:")
+	printf("    URL: %v", r.request.URL.String())
+	printf("    Method: %v", r.request.Method)
+	printf("    Header: %v", r.request.Header)
+	printf("Response:")
+	printf("    Body: %v", string(r.body))
+	printf("    Status: %v", r.rw.Code)
+	printf("    Header: %v", r.rw.Header())
+	printf("    Size: %v", r.rw.Body.Len())
 
 	return r
 }

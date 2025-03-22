@@ -105,6 +105,63 @@ func (r *request) Do(t require.TestingT, ctx context.Context) APIResponse {
 	return result
 }
 
+// Header sets the header of the request
+func (r *request) Header(_ require.TestingT, key, value string) APIRequest {
+	r.req.Header.Add(key, value)
+	return r
+}
+
+// Print prints the response to given writer, if not given, it prints to stdout
+func (r *request) Print(writer ...io.Writer) APIRequest {
+	var w io.Writer
+	if len(writer) > 0 && writer[0] != nil {
+		w = writer[0]
+	} else {
+		w = os.Stdout
+	}
+
+	// printf is a helper function to print formatted output and ignore errors
+	printf := func(format string, args ...any) {
+		_, _ = fmt.Fprintf(w, format+"\n", args...)
+	}
+	printf("Print:")
+	printf("  Request:")
+	printf("    URL: %v", r.req.URL.String())
+	printf("    Method: %v", r.req.Method)
+	printf("    Header: %v", r.req.Header)
+	if body, ok := r.getBody(nil); ok {
+		printf("    Body: %v", string(body))
+	} else {
+		printf("    Body: <nil>")
+	}
+
+	return r
+}
+
+// Query sets the query of the request
+func (r *request) Query(t require.TestingT, key, value string) APIRequest {
+	q := r.req.URL.Query()
+	q.Add(key, value)
+	r.req.URL.RawQuery = q.Encode()
+	return r
+}
+
+// getBody returns the body of the request and sets it to the request
+func (r *request) getBody(t require.TestingT) ([]byte, bool) {
+	// check if body is nil
+	if r.req.Body == nil {
+		return nil, false
+	}
+
+	body, err := io.ReadAll(r.req.Body)
+	require.NoErrorf(t, err, "failed to read request body: %v", err)
+
+	// set body to request
+	r.req.Body = NewReadCloser(bytes.NewReader(body))
+
+	return body, true
+}
+
 // doAddress does the request to the address
 func (r *request) doAddress(t require.TestingT, rw http.ResponseWriter, req *http.Request) {
 	// prepare client without any timeout since we add context to the request
@@ -142,42 +199,4 @@ func (r *request) doHandler(t require.TestingT, rw http.ResponseWriter, req *htt
 	assert.NotPanicsf(t, func() {
 		r.deps.Handler.ServeHTTP(rw, req)
 	}, "handler panicked")
-}
-
-// Header sets the header of the request
-func (r *request) Header(_ require.TestingT, key, value string) APIRequest {
-	r.req.Header.Add(key, value)
-	return r
-}
-
-// Print prints the response to given writer, if not given, it prints to stdout
-func (r *request) Print(writer ...io.Writer) APIRequest {
-	var w io.Writer
-	if len(writer) > 0 && writer[0] != nil {
-		w = writer[0]
-	} else {
-		w = os.Stdout
-	}
-
-	// printf is a helper function to print formatted output and ignore errors
-	printf := func(format string, args ...any) {
-		_, _ = fmt.Fprintf(w, format+"\n", args...)
-	}
-	// TODO: do this in a better way
-	printf("Print:")
-	printf("  Request:")
-	printf("    URL: %v", r.req.URL.String())
-	printf("    Method: %v", r.req.Method)
-	printf("    Header: %v", r.req.Header)
-
-	return r
-
-}
-
-// Query sets the query of the request
-func (r *request) Query(t require.TestingT, key, value string) APIRequest {
-	q := r.req.URL.Query()
-	q.Add(key, value)
-	r.req.URL.RawQuery = q.Encode()
-	return r
 }

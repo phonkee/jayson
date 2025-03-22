@@ -25,6 +25,7 @@
 package tester
 
 import (
+	"bytes"
 	"context"
 	"github.com/phonkee/jayson/tester/action"
 	"github.com/phonkee/jayson/tester/mocks"
@@ -148,4 +149,25 @@ func TestRequest_Body(t *testing.T) {
 		})
 	}
 
+}
+
+func TestRequest_Print(t *testing.T) {
+	t.Run("test print body", func(t *testing.T) {
+		t.Run("test missing body", func(t *testing.T) {
+			r := newRequest(t, http.MethodGet, "/", &Deps{Handler: noopHandler{}})
+			w := &bytes.Buffer{}
+			r.Print(w)
+			assert.Contains(t, w.String(), "    Body: <nil>")
+		})
+		t.Run("test valid body", func(t *testing.T) {
+			t.Run("test missing body", func(t *testing.T) {
+				r := newRequest(t, http.MethodGet, "/", &Deps{Handler: noopHandler{}}).Body(t, map[string]any{
+					"hello": "world",
+				})
+				w := &bytes.Buffer{}
+				r.Print(w)
+				assert.Contains(t, w.String(), `Body: {"hello":"world"}`)
+			})
+		})
+	})
 }

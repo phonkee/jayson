@@ -68,6 +68,8 @@ type APIRequest interface {
 	Do(t require.TestingT, ctx context.Context) APIResponse
 	// Header sets the header of the request
 	Header(t require.TestingT, key, value string) APIRequest
+	// Print the response to stdout
+	Print(writer ...io.Writer) APIRequest
 	// Query sets the query of the request
 	Query(t require.TestingT, key, value string) APIRequest
 }

@@ -28,17 +28,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 )
 
 // newRequest creates a new *request instance
 func newRequest(method, path string, deps *Deps) *request {
+	// TODO: we should create real request here
 	return &request{
 		method: method,
 		path:   path,
@@ -166,6 +169,30 @@ func (r *request) doHandler(t require.TestingT, rw http.ResponseWriter, req *htt
 func (r *request) Header(t require.TestingT, key, value string) APIRequest {
 	r.header.Add(key, value)
 	return r
+}
+
+// Print prints the response to given writer, if not given, it prints to stdout
+func (r *request) Print(writer ...io.Writer) APIRequest {
+	var w io.Writer
+	if len(writer) > 0 && writer[0] != nil {
+		w = writer[0]
+	} else {
+		w = os.Stdout
+	}
+
+	// printf is a helper function to print formatted output and ignore errors
+	printf := func(format string, args ...any) {
+		_, _ = fmt.Fprintf(w, format+"\n", args...)
+	}
+	// TODO: do this in a better way
+	printf("Print:")
+	printf("  Request:")
+	printf("    URL: %v", r.path)
+	printf("    Method: %v", r.method)
+	printf("    Header: %v", r.header)
+
+	return r
+
 }
 
 // Query sets the query of the request

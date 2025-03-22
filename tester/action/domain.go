@@ -67,3 +67,6 @@ const (
 
 // unmarshalActionValueFunc is a function that unmarshal the action value from the response.
 type unmarshalActionValueFunc = func(t require.TestingT, raw json.RawMessage, a Action) (any, error)
+
+// nullRawMessage is a raw message that represents a null value in JSON.
+var nullRawMessage = json.RawMessage("null")

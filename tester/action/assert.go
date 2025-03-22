@@ -25,6 +25,7 @@
 package action
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -326,8 +327,6 @@ func AssertLte[T constraints.Integer](value T) Action {
 	}
 }
 
-var nullRawMessage = json.RawMessage("null")
-
 // AssertNil asserts that given value is nil
 func AssertNil() Action {
 	return &actionFunc{
@@ -338,7 +337,7 @@ func AssertNil() Action {
 			if raw == nil {
 				return fmt.Errorf("%w: value missing", ErrActionAssertNil)
 			}
-			if !assert.Equal(&requireTestingT{}, nullRawMessage, raw) {
+			if !assert.Equal(&requireTestingT{}, nullRawMessage, json.RawMessage(bytes.ToLower(raw))) {
 				return fmt.Errorf("%w: expected value to be nil, got %#v", ErrActionAssertNil, string(raw))
 			}
 			return nil

@@ -224,6 +224,8 @@ func TestAssertNil(t *testing.T) {
 			input json.RawMessage
 		}{
 			{json.RawMessage(`null`)},
+			{json.RawMessage(`NULL`)},
+			{json.RawMessage(`Null`)},
 		}
 
 		for i, test := range tests {

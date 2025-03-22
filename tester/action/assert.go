@@ -299,52 +299,73 @@ func AssertNotIn[T any](values ...T) Action {
 	}
 }
 
-// AssertRegex asserts that given value matches the regex in the response
+// AssertNotZero asserts that given value is not zero
+func AssertNotZero() Action {
+	return &actionFunc{
+		run: func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+
+			for _, zeroValue := range zeroValues {
+				if assert.JSONEq(&requireTestingT{}, string(zeroValue), string(raw)) {
+					return fmt.Errorf("%w: expected value to not be zero, got %#v", ErrAction, raw)
+				}
+			}
+
+			return nil
+		},
+		support: []Support{SupportHeader, SupportJson},
+	}
+}
+
+// AssertRegexMatch asserts that given value matches the regex in the response
 // if count provided it will check for the number of matches,
 // otherwise it will check if the value matches the regex
-func AssertRegex(pattern *regexp.Regexp, count ...int) Action {
+func AssertRegexMatch(pattern *regexp.Regexp) Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
-			if len(count) > 0 {
-				matches := pattern.FindAllSubmatch(raw, -1)
-				if len(matches) != count[0] {
-					return fmt.Errorf("expected %d matches, got %d for regex: %#v", count[0], len(matches), pattern.String())
-				}
-			} else {
-				if !pattern.Match(raw) {
-					return fmt.Errorf("expected %s to match regex: %#v", raw, pattern.String())
-				}
+			if raw == nil {
+				return fmt.Errorf("expected value to exist, but it does not")
+			}
+
+			// match regular expression
+			if !pattern.Match(raw) {
+				return fmt.Errorf("expected %s to match regex: %#v", raw, pattern.String())
 			}
 			return nil
 		},
 		support:   []Support{SupportHeader, SupportJson, SupportStatus},
-		baseError: ErrActionAssertRegex,
+		baseError: ErrActionAssertRegexMatch,
 	}
 }
 
-type zeroValue json.RawMessage
+// AssertRegexSearch asserts that given regular expression searches the value in the response
+func AssertRegexSearch(pattern *regexp.Regexp, count int) Action {
+	return &actionFunc{
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			if raw == nil {
+				return fmt.Errorf("expected value to exist, but it does not")
+			}
 
-var (
-	zeroValueNumeric zeroValue = zeroValue("0")
-	zeroValueString            = zeroValue(`""`)
-	zeroValueBool    zeroValue = zeroValue("false")
-	zeroValueArray   zeroValue = zeroValue("[]")
-	zeroValueStruct  zeroValue = zeroValue("{}")
-	zeroValueNil     zeroValue = zeroValue("null")
+			// find all matches
+			matches := pattern.FindAllSubmatch(raw, -1)
+			if len(matches) != count {
+				return fmt.Errorf("expected %d matches, got %d for regex: %#v", count, len(matches), pattern.String())
+			}
 
-	// zeroValues is a list of all zero values
-	zeroValues = []zeroValue{
-		zeroValueNumeric,
-		zeroValueString,
-		zeroValueBool,
-		zeroValueArray,
-		zeroValueStruct,
-		zeroValueNil,
+			return nil
+		},
+		support:   []Support{SupportHeader, SupportJson, SupportStatus},
+		baseError: ErrActionAssertRegexSearch,
 	}
-)
+}
 
 // AssertZero asserts that given value is zero
 func AssertZero() Action {
@@ -364,26 +385,6 @@ func AssertZero() Action {
 
 		},
 
-		support: []Support{SupportHeader, SupportJson},
-	}
-}
-
-// AssertNotZero asserts that given value is not zero
-func AssertNotZero() Action {
-	return &actionFunc{
-		run: func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
-			if err != nil {
-				return err
-			}
-
-			for _, zeroValue := range zeroValues {
-				if assert.JSONEq(&requireTestingT{}, string(zeroValue), string(raw)) {
-					return fmt.Errorf("%w: expected value to not be zero, got %#v", ErrAction, raw)
-				}
-			}
-
-			return nil
-		},
 		support: []Support{SupportHeader, SupportJson},
 	}
 }

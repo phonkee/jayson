@@ -38,6 +38,10 @@ var (
 
 	// ErrAction when action is not applied
 	ErrAction = errors.New("action")
+
+	// ErrNotPresent is passed from tester when value is not present
+	// This is used in some assertions such as AssertExists.
+	ErrNotPresent = errors.New("not present")
 )
 
 // newErrAction creates a new error with the given name and error
@@ -51,9 +55,6 @@ var (
 	ErrActionAssertIn            = newErrAction("AssertIn")
 	ErrActionAssertKeys          = newErrAction("AssertKeys")
 	ErrActionAssertLen           = newErrAction("AssertLen")
-	ErrActionAssertNotEquals     = newErrAction("AssertNotEquals")
-	ErrActionAssertNotExists     = newErrAction("AssertNotExists")
-	ErrActionAssertNotIn         = newErrAction("AssertNotIn")
 	ErrActionAssertGt            = newErrAction("AssertGt")
 	ErrActionAssertGte           = newErrAction("AssertGte")
 	ErrActionAssertLt            = newErrAction("AssertLt")
@@ -65,5 +66,4 @@ var (
 	ErrActionUnmarshal           = newErrAction("Unmarshal")
 	ErrActionUnmarshalObjectKeys = newErrAction("UnmarshalObjectKeys")
 	ErrActionAssertNot           = newErrAction("AssertNot")
-	ErrNotPresent                = errors.New("not present")
 )

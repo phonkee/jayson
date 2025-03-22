@@ -115,12 +115,8 @@ func TestResponse_Header(t *testing.T) {
 
 				// mock testing
 				m := mocks.NewTestingT(t)
-				//m.On("Errorf", mock.MatchedBy(matchByStringContains(item.expect)))
-				//m.On("FailNow")
 				r.Header(m, item.key, item.action)
-				//m.AssertExpectations(t)
-				//m.AssertNumberOfCalls(t, "Errorf", 1)
-				//m.AssertNumberOfCalls(t, "FailNow", 1)
+				m.AssertExpectations(t)
 			})
 		}
 	})

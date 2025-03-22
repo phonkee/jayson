@@ -68,9 +68,13 @@ func (r *request) Body(t require.TestingT, body any) APIRequest {
 	case io.Reader:
 		r.req.Body = NewReadCloser(body.(io.Reader))
 	default:
-		buffer := new(bytes.Buffer)
-		assert.NoErrorf(t, json.NewEncoder(buffer).Encode(body), "cannot marshal to json: %v", body)
-		r.req.Body = NewReadCloser(buffer)
+		if body == nil {
+			r.req.Body = nil
+		} else {
+			buffer := new(bytes.Buffer)
+			assert.NoErrorf(t, json.NewEncoder(buffer).Encode(body), "cannot marshal to json: %v", body)
+			r.req.Body = NewReadCloser(buffer)
+		}
 	}
 	return r
 }

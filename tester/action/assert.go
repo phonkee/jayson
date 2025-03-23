@@ -129,7 +129,7 @@ func AssertExists() Action {
 }
 
 // AssertGt asserts that given value is greater than the value in the response
-func AssertGt[T constraints.Integer](value T) Action {
+func AssertGt[T comparable](value T) Action {
 	return &actionFunc{
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
@@ -149,7 +149,7 @@ func AssertGt[T constraints.Integer](value T) Action {
 }
 
 // AssertGte asserts that given value is greater than or equal to the value in the response
-func AssertGte[T constraints.Integer](value T) Action {
+func AssertGte[T comparable](value T) Action {
 	return &actionFunc{
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
@@ -287,7 +287,7 @@ func AssertLen[T constraints.Integer](l T) Action {
 }
 
 // AssertLt asserts that given value is less than the value in the response
-func AssertLt[T constraints.Integer](value T) Action {
+func AssertLt[T comparable](value T) Action {
 	return &actionFunc{
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
@@ -307,7 +307,7 @@ func AssertLt[T constraints.Integer](value T) Action {
 }
 
 // AssertLte asserts that given value is less than or equal to the value in the response
-func AssertLte[T constraints.Integer](value T) Action {
+func AssertLte[T comparable](value T) Action {
 	return &actionFunc{
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
@@ -395,7 +395,8 @@ func AssertRegexSearch(pattern *regexp.Regexp, count int) Action {
 	}
 }
 
-// AssertZero asserts that given value is zero
+// AssertZero asserts that given value is zero value
+// It checks json.RawMessage for zero values
 func AssertZero() Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
@@ -403,14 +404,19 @@ func AssertZero() Action {
 				return err
 			}
 
-			for _, zeroValue := range zeroValues {
-				if assert.JSONEq(&requireTestingT{}, string(zeroValue), string(raw)) {
+			if value != nil {
+				if reflect.ValueOf(value).IsZero() {
 					return nil
+				}
+			} else {
+				for _, zeroValue := range zeroValues {
+					if assert.JSONEq(&requireTestingT{}, string(zeroValue), string(raw)) {
+						return nil
+					}
 				}
 			}
 
 			return fmt.Errorf("%w: expected value to be zero, got %#v", ErrAction, raw)
-
 		},
 
 		support: []Support{SupportHeader, SupportJson},

@@ -260,6 +260,44 @@ func TestAssertNil(t *testing.T) {
 	})
 }
 
+func TestAssertNot(t *testing.T) {
+	t.Run("test valid values", func(t *testing.T) {
+		for _, test := range []struct {
+			name   string
+			action Action
+			value  any
+			raw    json.RawMessage
+		}{
+			{name: "test equals string", action: AssertEquals("nope"), value: "world", raw: json.RawMessage(`"world"`)},
+			{name: "test gt int", action: AssertGt(10), value: 5, raw: json.RawMessage(`5`)},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				an := AssertNot(test.action)
+				m := mocks.NewTestingT(t)
+				require.NoError(t, an.Run(m, context.Background(), test.value, nil, nil))
+			})
+		}
+
+	})
+	t.Run("test invalid values", func(t *testing.T) {
+		for _, test := range []struct {
+			name   string
+			action Action
+			value  any
+			raw    json.RawMessage
+		}{
+			{name: "test equals string", action: AssertEquals("hello"), value: "hello", raw: json.RawMessage(`"hello"`)},
+			{name: "test gt int", action: AssertGt(1), value: 5, raw: json.RawMessage(`5`)},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				an := AssertNot(test.action)
+				m := mocks.NewTestingT(t)
+				require.Error(t, an.Run(m, context.Background(), test.value, nil, nil))
+			})
+		}
+	})
+}
+
 func TestAssertZero(t *testing.T) {
 	t.Run("test valid values", func(t *testing.T) {
 		// Test cases for AssertZero
@@ -299,50 +337,6 @@ func TestAssertZero(t *testing.T) {
 				ass := AssertZero()
 				m := mocks.NewTestingT(t)
 				require.Error(t, ass.Run(m, context.Background(), nil, test.input, nil))
-			})
-		}
-	})
-}
-
-func TestAssertNotZero(t *testing.T) {
-	t.Run("test valid values", func(t *testing.T) {
-		// Test cases for AssertZero
-		tests := []struct {
-			input json.RawMessage
-		}{
-			{json.RawMessage(`0`)},
-			{json.RawMessage(`""`)},
-			{json.RawMessage(`[]`)},
-			{json.RawMessage(`{}`)},
-			{json.RawMessage(`false`)},
-		}
-
-		for i, test := range tests {
-			t.Run(strconv.Itoa(i), func(t *testing.T) {
-				ass := AssertNot(AssertZero())
-				m := mocks.NewTestingT(t)
-				require.Error(t, ass.Run(m, context.Background(), nil, test.input, nil))
-			})
-		}
-	})
-
-	t.Run("test invalid values", func(t *testing.T) {
-		// Test cases for AssertZero
-		tests := []struct {
-			input json.RawMessage
-		}{
-			{json.RawMessage(`1`)},
-			{json.RawMessage(`"hello"`)},
-			{json.RawMessage(`[1]`)},
-			{json.RawMessage(`{"hello": "world""}`)},
-			{json.RawMessage(`true`)},
-		}
-
-		for i, test := range tests {
-			t.Run(strconv.Itoa(i), func(t *testing.T) {
-				ass := AssertNot(AssertZero())
-				m := mocks.NewTestingT(t)
-				require.NoError(m, ass.Run(m, context.Background(), nil, test.input, nil))
 			})
 		}
 	})

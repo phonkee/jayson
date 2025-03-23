@@ -38,6 +38,10 @@ var (
 
 	// ErrAction when action is not applied
 	ErrAction = errors.New("action")
+
+	// ErrNotPresent is passed from tester when value is not present
+	// This is used in some assertions such as AssertExists.
+	ErrNotPresent = errors.New("not present")
 )
 
 // newErrAction creates a new error with the given name and error
@@ -46,21 +50,24 @@ func newErrAction(name string) error {
 }
 
 var (
+	ErrActionAssertBetween       = newErrAction("AssertBetween")
 	ErrActionAssertEquals        = newErrAction("AssertEquals")
 	ErrActionAssertExists        = newErrAction("AssertExists")
 	ErrActionAssertIn            = newErrAction("AssertIn")
 	ErrActionAssertKeys          = newErrAction("AssertKeys")
 	ErrActionAssertLen           = newErrAction("AssertLen")
-	ErrActionAssertNotEquals     = newErrAction("AssertNotEquals")
-	ErrActionAssertNotExists     = newErrAction("AssertNotExists")
-	ErrActionAssertNotIn         = newErrAction("AssertNotIn")
 	ErrActionAssertGt            = newErrAction("AssertGt")
 	ErrActionAssertGte           = newErrAction("AssertGte")
 	ErrActionAssertLt            = newErrAction("AssertLt")
 	ErrActionAssertLte           = newErrAction("AssertLte")
 	ErrActionAssertAll           = newErrAction("AssertAll")
 	ErrActionAssertAny           = newErrAction("AssertAny")
-	ErrActionAssertRegex         = newErrAction("AssertRegex")
+	ErrActionAssertRegexMatch    = newErrAction("ErrActionAssertRegexMatch")
+	ErrActionAssertRegexSearch   = newErrAction("ErrActionAssertRegexSearch")
 	ErrActionUnmarshal           = newErrAction("Unmarshal")
 	ErrActionUnmarshalObjectKeys = newErrAction("UnmarshalObjectKeys")
+	ErrActionAssertNot           = newErrAction("AssertNot")
+	ErrActionAssertContains      = newErrAction("AssertContains")
+	ErrActionAssertNil           = newErrAction("AssertNil")
+	ErrActionPath                = newErrAction("Path")
 )

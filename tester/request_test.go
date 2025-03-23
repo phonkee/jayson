@@ -25,6 +25,7 @@
 package tester
 
 import (
+	"bytes"
 	"context"
 	"github.com/phonkee/jayson/tester/action"
 	"github.com/phonkee/jayson/tester/mocks"
@@ -59,12 +60,12 @@ func (n noopHandler) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 }
 
 func TestRequest_Header(t *testing.T) {
-	r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}}).
+	r := newRequest(t, http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}}).
 		Header(t, "key", "action")
 	r.Do(t, context.Background())
-	assert.Equal(t, []string{ContentTypeJSON}, r.(*request).header.Values(ContentTypeHeader))
-	assert.Equal(t, ContentTypeJSON, r.(*request).header.Get(ContentTypeHeader))
-	assert.Equal(t, "action", r.(*request).header.Get("key"))
+	assert.Equal(t, []string{ContentTypeJSON}, r.(*request).req.Header.Values(ContentTypeHeader))
+	assert.Equal(t, ContentTypeJSON, r.(*request).req.Header.Get(ContentTypeHeader))
+	assert.Equal(t, "action", r.(*request).req.Header.Get("key"))
 }
 
 func TestRequest_Query(t *testing.T) {
@@ -90,6 +91,7 @@ func TestRequest_Query(t *testing.T) {
 			}, nil)
 
 			r := newRequest(
+				t,
 				http.MethodGet,
 				item.url,
 				&Deps{
@@ -140,11 +142,32 @@ func TestRequest_Body(t *testing.T) {
 		},
 	} {
 		t.Run(item.name, func(t *testing.T) {
-			r := newRequest(http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}})
+			r := newRequest(t, http.MethodGet, "http://localhost:8080", &Deps{Handler: noopHandler{}})
 			r.Body(t, item.body)
 
-			assert.JSONEq(t, item.expected, string(must(io.ReadAll(r.body))))
+			assert.JSONEq(t, item.expected, string(must(io.ReadAll(r.req.Body))))
 		})
 	}
 
+}
+
+func TestRequest_Print(t *testing.T) {
+	t.Run("test print body", func(t *testing.T) {
+		t.Run("test missing body", func(t *testing.T) {
+			r := newRequest(t, http.MethodGet, "/", &Deps{Handler: noopHandler{}})
+			w := &bytes.Buffer{}
+			r.Print(w)
+			assert.Contains(t, w.String(), "    Body: <nil>")
+		})
+		t.Run("test valid body", func(t *testing.T) {
+			t.Run("test missing body", func(t *testing.T) {
+				r := newRequest(t, http.MethodGet, "/", &Deps{Handler: noopHandler{}}).Body(t, map[string]any{
+					"hello": "world",
+				})
+				w := &bytes.Buffer{}
+				r.Print(w)
+				assert.Contains(t, w.String(), `Body: {"hello":"world"}`)
+			})
+		})
+	})
 }

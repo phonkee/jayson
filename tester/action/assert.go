@@ -25,8 +25,10 @@
 package action
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,6 +37,46 @@ import (
 	"regexp"
 	"sort"
 )
+
+// AssertBetween asserts that given integer value is between the values (inclusive)
+func AssertBetween[T comparable](min, max T) Action {
+	return &actionFunc{
+		value: func(t require.TestingT) (any, bool) {
+			return min, true
+		},
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			if !assert.GreaterOrEqual(&requireTestingT{}, v, min) {
+				return fmt.Errorf("%w: expected %v to be between [%v, %v]", ErrActionAssertBetween, v, min, max)
+			}
+			if !assert.LessOrEqual(&requireTestingT{}, v, max) {
+				return fmt.Errorf("%w: expected %v to be between [%v, %v]", ErrActionAssertBetween, v, min, max)
+			}
+			return nil
+		},
+		support:   []Support{SupportJson, SupportStatus},
+		baseError: ErrActionAssertBetween,
+	}
+}
+
+// AssertContains asserts json raw message contains the given string
+func AssertContains(contains string) Action {
+	return &actionFunc{
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			if !assert.Contains(&requireTestingT{}, string(raw), contains) {
+				return fmt.Errorf("%w: expected %s to contain %s", ErrActionAssertContains, string(raw), contains)
+			}
+			return nil
+		},
+		support:   []Support{SupportHeader, SupportJson},
+		baseError: ErrActionAssertContains,
+	}
+}
 
 // AssertEquals asserts that given value is equal to the value in the response
 func AssertEquals(value any) Action {
@@ -47,6 +89,8 @@ func AssertEquals(value any) Action {
 				return err
 			}
 
+			// special case for json.RawMessage
+			// we call json eq to compare the values correctly
 			if reflect.TypeOf(v) == reflect.TypeOf(json.RawMessage{}) {
 				if !assert.JSONEq(&requireTestingT{}, string(v.(json.RawMessage)), string(raw)) {
 					return fmt.Errorf("%w, expected: %#v, got: %#v", ErrActionAssertEquals, value, v)
@@ -69,6 +113,9 @@ func AssertExists() Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
+				if errors.Is(err, ErrNotPresent) {
+					return fmt.Errorf("%w: expected value to exist, but it does not", ErrActionAssertExists)
+				}
 				return err
 			}
 			if raw == nil {
@@ -82,7 +129,7 @@ func AssertExists() Action {
 }
 
 // AssertGt asserts that given value is greater than the value in the response
-func AssertGt[T constraints.Integer](value T) Action {
+func AssertGt[T comparable](value T) Action {
 	return &actionFunc{
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
@@ -102,7 +149,7 @@ func AssertGt[T constraints.Integer](value T) Action {
 }
 
 // AssertGte asserts that given value is greater than or equal to the value in the response
-func AssertGte[T constraints.Integer](value T) Action {
+func AssertGte[T comparable](value T) Action {
 	return &actionFunc{
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
@@ -132,8 +179,9 @@ func AssertIn[T any](values ...T) Action {
 			if err != nil {
 				return err
 			}
-			ok, found := containsElement(values, v)
-			if !ok || !found {
+
+			// check if value is in the list of values
+			if !assert.Contains(&requireTestingT{}, values, v) {
 				return fmt.Errorf("%w: expected value %#v to be in %#v", ErrActionAssertIn, v, values)
 			}
 
@@ -173,6 +221,52 @@ func AssertKeys(keys ...string) Action {
 	}
 }
 
+// AssertKeysIn asserts that given map has the given keys
+func AssertKeysIn(keys ...string) Action {
+	return &actionFunc{
+		value: func(t require.TestingT) (any, bool) {
+			return map[string]any{}, true
+		},
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			var valueMap map[string]any
+			if v == nil {
+				valueMap = make(map[string]any)
+			}
+			if cast, ok := v.(map[string]any); ok {
+				valueMap = cast
+			}
+
+			// collect all the keys from the map
+			found := make([]string, 0, len(keys))
+			for key := range valueMap {
+				found = append(found, key)
+			}
+
+			var isThere bool
+
+		outer:
+			for _, f := range found {
+				for _, k := range keys {
+					if assert.ObjectsAreEqual(f, k) {
+						isThere = true
+						break outer
+					}
+				}
+			}
+
+			if !isThere {
+				return fmt.Errorf("%w: expected keys %#v be in %#v", ErrActionAssertKeys, found, keys)
+			}
+			return nil
+		},
+		support:   []Support{SupportJson},
+		baseError: ErrActionAssertKeys,
+	}
+}
+
 // AssertLen asserts that given array/object has the given length
 func AssertLen[T constraints.Integer](l T) Action {
 	return &actionFunc{
@@ -194,7 +288,7 @@ func AssertLen[T constraints.Integer](l T) Action {
 }
 
 // AssertLt asserts that given value is less than the value in the response
-func AssertLt[T constraints.Integer](value T) Action {
+func AssertLt[T comparable](value T) Action {
 	return &actionFunc{
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
@@ -214,7 +308,7 @@ func AssertLt[T constraints.Integer](value T) Action {
 }
 
 // AssertLte asserts that given value is less than or equal to the value in the response
-func AssertLte[T constraints.Integer](value T) Action {
+func AssertLte[T comparable](value T) Action {
 	return &actionFunc{
 		value: func(t require.TestingT) (any, bool) {
 			return value, true
@@ -234,94 +328,99 @@ func AssertLte[T constraints.Integer](value T) Action {
 	}
 }
 
-// AssertNotEquals asserts that given value is not equal to the value in the response
-func AssertNotEquals(value any) Action {
+// AssertNil asserts that given value is nil
+func AssertNil() Action {
 	return &actionFunc{
-		value: func(t require.TestingT) (any, bool) {
-			return value, true
-		},
 		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
-			if reflect.TypeOf(v) == reflect.TypeOf(json.RawMessage{}) {
-				stringValue := string(value.(json.RawMessage))
-				if assert.JSONEq(&requireTestingT{}, string(v.(json.RawMessage)), string(raw)) {
-					return fmt.Errorf("%w: expected value to not be equal to %v", ErrActionAssertNotEquals, stringValue)
-				}
-			} else {
-				if assert.ObjectsAreEqual(v, value) {
-					return fmt.Errorf("%w: expected value to not be equal to %#v", ErrActionAssertNotEquals, value)
-				}
+			if raw == nil {
+				return fmt.Errorf("%w: value missing", ErrActionAssertNil)
 			}
-			return nil
-		},
-		support:   []Support{SupportHeader, SupportJson, SupportStatus},
-		baseError: ErrActionAssertNotEquals,
-	}
-}
-
-// AssertNotExists asserts that the value does not exist in the response based on given argument
-func AssertNotExists() Action {
-	return &actionFunc{
-		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
-			if err != nil {
-				return nil
-			}
-			if raw != nil {
-				return fmt.Errorf("%w: expected value to not exist, but it does", ErrActionAssertNotExists)
+			if !assert.Equal(&requireTestingT{}, nullRawMessage, json.RawMessage(bytes.ToLower(raw))) {
+				return fmt.Errorf("%w: expected value to be nil, got %#v", ErrActionAssertNil, string(raw))
 			}
 			return nil
 		},
 		support:   []Support{SupportHeader, SupportJson},
-		baseError: ErrActionAssertNotExists,
+		baseError: ErrActionAssertNil,
 	}
 }
 
-// AssertNotIn asserts that value is not in the given list of values
-func AssertNotIn[T any](values ...T) Action {
-	return &actionFunc{
-		value: func(t require.TestingT) (any, bool) {
-			return values[0], true
-		},
-		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
-			if err != nil {
-				return err
-			}
-			ok, found := containsElement(values, v)
-			if !ok || !found {
-				return nil
-			}
-			return fmt.Errorf("%w: expected value %#v to not be in %#v", ErrActionAssertNotIn, v, values)
-		},
-		support:   []Support{SupportHeader, SupportJson, SupportStatus},
-		baseError: ErrActionAssertNotIn,
-	}
-}
-
-// AssertRegex asserts that given value matches the regex in the response
+// AssertRegexMatch asserts that given value matches the regex in the response
 // if count provided it will check for the number of matches,
 // otherwise it will check if the value matches the regex
-func AssertRegex(pattern *regexp.Regexp, count ...int) Action {
+func AssertRegexMatch(pattern *regexp.Regexp) Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
 			if err != nil {
 				return err
 			}
-			if len(count) > 0 {
-				matches := pattern.FindAllSubmatch(raw, -1)
-				if len(matches) != count[0] {
-					return fmt.Errorf("expected %d matches, got %d for regex: %#v", count[0], len(matches), pattern.String())
-				}
-			} else {
-				if !pattern.Match(raw) {
-					return fmt.Errorf("expected %s to match regex: %#v", raw, pattern.String())
-				}
+			if raw == nil {
+				return fmt.Errorf("expected value to exist, but it does not")
+			}
+
+			// match regular expression
+			if !pattern.Match(raw) {
+				return fmt.Errorf("expected %s to match regex: %#v", raw, pattern.String())
 			}
 			return nil
 		},
 		support:   []Support{SupportHeader, SupportJson, SupportStatus},
-		baseError: ErrActionAssertRegex,
+		baseError: ErrActionAssertRegexMatch,
+	}
+}
+
+// AssertRegexSearch asserts that given regular expression is found given number of times
+func AssertRegexSearch(pattern *regexp.Regexp, count int) Action {
+	return &actionFunc{
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+			if raw == nil {
+				return fmt.Errorf("expected value to exist, but it does not")
+			}
+
+			// find all matches
+			matches := pattern.FindAllSubmatch(raw, -1)
+			if len(matches) != count {
+				return fmt.Errorf("expected %d matches, got %d for regex: %#v", count, len(matches), pattern.String())
+			}
+
+			return nil
+		},
+		support:   []Support{SupportHeader, SupportJson, SupportStatus},
+		baseError: ErrActionAssertRegexSearch,
+	}
+}
+
+// AssertZero asserts that given value is zero value
+// It checks json.RawMessage for zero values
+func AssertZero() Action {
+	return &actionFunc{
+		run: func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if value != nil {
+				if reflect.ValueOf(value).IsZero() {
+					return nil
+				}
+			} else {
+				for _, zeroValue := range zeroValues {
+					if assert.JSONEq(&requireTestingT{}, string(zeroValue), string(raw)) {
+						return nil
+					}
+				}
+			}
+
+			return fmt.Errorf("%w: expected value to be zero, got %#v", ErrAction, raw)
+		},
+
+		support: []Support{SupportHeader, SupportJson},
 	}
 }
 
@@ -345,4 +444,29 @@ func (l *length) UnmarshalJSON(b []byte) error {
 	}
 
 	return nil
+}
+
+// AssertNot asserts that given action does not succeed, otherwise it fails
+// This assertion does not need any special handling, it just relies on correct errors (ErrAction, ErrNotPresent)
+func AssertNot(a Action) Action {
+	return &actionFunc{
+		value: func(t require.TestingT) (any, bool) {
+			return a.Value(t)
+		},
+		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
+			// run the provided action
+			runErr := a.Run(t, ctx, v, raw, err)
+
+			// check for error
+			if runErr != nil {
+				if errors.Is(runErr, ErrAction) {
+					return nil
+				}
+				return fmt.Errorf("expected action to fail, but it did not: %w", runErr)
+			}
+			return fmt.Errorf("expected action to fail, but it did not")
+		},
+		supportsFunc: a.Supports,
+		baseError:    ErrActionAssertNot,
+	}
 }

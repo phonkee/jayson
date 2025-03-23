@@ -64,10 +64,16 @@ type APIClient interface {
 type APIRequest interface {
 	// Body sets the body of the request
 	Body(t require.TestingT, body any) APIRequest
+
 	// Do perform the request and returns the response
 	Do(t require.TestingT, ctx context.Context) APIResponse
+
 	// Header sets the header of the request
 	Header(t require.TestingT, key, value string) APIRequest
+
+	// Print the response to stdout
+	Print(writer ...io.Writer) APIRequest
+
 	// Query sets the query of the request
 	Query(t require.TestingT, key, value string) APIRequest
 }
@@ -76,7 +82,7 @@ type APIRequest interface {
 type APIResponse interface {
 
 	// Print the response to stdout
-	Print(writer io.Writer) APIResponse
+	Print(writer ...io.Writer) APIResponse
 
 	// Header asserts that response header action is equal to given action
 	Header(t require.TestingT, key string, action action.Action) APIResponse
@@ -99,3 +105,8 @@ const (
 type RoundTripper interface {
 	http.RoundTripper
 }
+
+const (
+	// RootPath is the root path for Response Json call
+	RootPath string = ""
+)

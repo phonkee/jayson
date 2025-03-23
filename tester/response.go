@@ -36,6 +36,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -57,19 +58,29 @@ type response struct {
 }
 
 // Print prints whole response
-func (r *response) Print(writer io.Writer) APIResponse {
-	printf := func(format string, args ...any) {
-		_, _ = fmt.Fprintf(writer, format, args...)
+func (r *response) Print(writer ...io.Writer) APIResponse {
+	var w io.Writer
+	if len(writer) > 0 && writer[0] != nil {
+		w = writer[0]
+	} else {
+		w = os.Stdout
 	}
-	printf("Request:\n")
-	printf("    URL: %v\n", r.request.URL.String())
-	printf("    Method: %v\n", r.request.Method)
-	printf("    Header: %v\n", r.request.Header)
-	printf("Response:\n")
-	printf("    Body: %v\n", string(r.body))
-	printf("    Status: %v\n", r.rw.Code)
-	printf("    Header: %v\n", r.rw.Header())
-	printf("    Size: %v\n", r.rw.Body.Len())
+
+	// printf is a helper function to print formatted output and ignore errors
+	printf := func(format string, args ...any) {
+		_, _ = fmt.Fprintf(w, format+"\n", args...)
+	}
+	printf("Print:")
+	printf("  Request:")
+	printf("    URL: %v", r.request.URL.String())
+	printf("    Method: %v", r.request.Method)
+	printf("    Header: %v", r.request.Header)
+	printf("  Response:")
+	printf("    Body: %v", string(r.body))
+	printf("    Status: %v", r.rw.Code)
+	printf("    StatusMessage: %v", http.StatusText(r.rw.Code))
+	printf("    Header: %v", r.rw.Header())
+	printf("    Size: %v", r.rw.Body.Len())
 
 	return r
 }
@@ -91,7 +102,7 @@ func (r *response) Header(t require.TestingT, key string, a action.Action) APIRe
 			raw = buffer.Bytes()
 		}
 	} else {
-		err = fmt.Errorf("header not present")
+		err = action.ErrNotPresent
 	}
 
 	// context instance
@@ -111,6 +122,7 @@ func (r *response) Header(t require.TestingT, key string, a action.Action) APIRe
 
 	// now run action
 	if err := a.Run(t, ctx, value, raw, err); err != nil {
+		// TODO: check if we have action error, otherwise we need to add it somehow
 		require.Fail(t, fmt.Sprintf("FAILED: `response.Header`, name: `%s`, %v", key, err.Error()))
 	}
 
@@ -146,7 +158,7 @@ main:
 
 			// check if the number is in bounds
 			if int(number) >= len(arr) {
-				err = fmt.Errorf("out of bounds")
+				err = fmt.Errorf("%w: out of bounds", action.ErrNotPresent)
 				break main
 			}
 
@@ -164,7 +176,7 @@ main:
 
 		// check if object contains the part
 		if raw, ok = obj[part]; !ok {
-			err = fmt.Errorf("not present")
+			err = action.ErrNotPresent
 			break main
 		}
 	}
@@ -185,8 +197,9 @@ main:
 	}
 
 	// now run action
-	if err := a.Run(t, ctx, value, raw, err); err != nil {
-		require.Fail(t, fmt.Sprintf("FAILED: `response.Json`, path: `%s`, %v", path, err.Error()))
+	if errRun := a.Run(t, ctx, value, raw, err); errRun != nil {
+		// TODO: check if we have action error, otherwise we need to add it somehow
+		require.Fail(t, fmt.Sprintf("FAILED: `response.Json`, path: `%s`, %v", path, errRun.Error()))
 	}
 
 	return r
@@ -212,6 +225,7 @@ func (r *response) Status(t require.TestingT, a action.Action) APIResponse {
 
 	// now call a.Run
 	if err := a.Run(t, ctx, value, raw, err); err != nil {
+		// TODO: check if we have action error, otherwise we need to add it somehow
 		require.NoError(t, err)
 	}
 

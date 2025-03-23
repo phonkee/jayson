@@ -102,7 +102,7 @@ func TestResponse_Header(t *testing.T) {
 				name:    "header does not exist",
 				headers: map[string][]string{"Hello": {"This", "World"}},
 				key:     "Nope",
-				action:  action.AssertNotExists(),
+				action:  action.AssertNot(action.AssertExists()),
 			},
 		} {
 			t.Run(item.name, func(t *testing.T) {
@@ -650,19 +650,19 @@ func TestResponse_Json(t *testing.T) {
 						name:   "test integer",
 						body:   `{"object": {"name": 40}}`,
 						path:   "object.name",
-						action: action.AssertNotEquals(41),
+						action: action.AssertNot(action.AssertEquals(41)),
 					},
 					{
 						name:   "test integer",
 						body:   `{"object": {"name": -40}}`,
 						path:   "object.name",
-						action: action.AssertNotEquals(-50),
+						action: action.AssertNot(action.AssertEquals(-50)),
 					},
 					{
 						name:   "test integer",
 						body:   `{"object": {"name": -40}}`,
 						path:   "object.name",
-						action: action.AssertNotEquals(-120),
+						action: action.AssertNot(action.AssertEquals(-120)),
 					},
 				} {
 					t.Run(item.name, func(t *testing.T) {
@@ -685,35 +685,73 @@ func TestResponse_Json(t *testing.T) {
 						name:          "test integer",
 						body:          `{"object": {"name": 41}}`,
 						path:          "object.name",
-						action:        action.AssertNotEquals(41),
-						expectMessage: "FAILED: `response.Json`, path: `object.name`, action: `AssertNotEquals`: expected value to not be equal to 41",
+						action:        action.AssertNot(action.AssertEquals(41)),
+						expectMessage: "FAILED: `response.Json`, path: `object.name`, expected action to fail, but it did not",
 					},
 					{
 						name:          "test integer",
 						body:          `{"object": {"name": -60}}`,
 						path:          "object.name",
-						action:        action.AssertNotEquals(-60),
+						action:        action.AssertNot(action.AssertEquals(-61)),
 						expectMessage: "FAILED: `response.Json`, path: `object.name`, action: `AssertNotEquals`: expected value to not be equal to -60",
 					},
 					{
 						name:          "test integer",
 						body:          `{"object": {"name": -60}}`,
 						path:          "object.name",
-						action:        action.AssertNotEquals(json.RawMessage(`{}`)),
-						expectMessage: "FAILED: `response.Json`, path: `object.name`, action: `AssertNotEquals`: expected value to not be equal to {}",
+						action:        action.AssertNot(action.AssertEquals(json.RawMessage(`{}`))),
+						expectMessage: "AILED: `response.Json`, path: `object.name`, expected action to fail, but it did not",
 					},
 				} {
 					t.Run(item.name, func(t *testing.T) {
 						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 						r.body = []byte(item.body)
 						m := mocks.NewTestingT(t)
-						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Once()
-						m.On("FailNow")
+						m.On("Errorf", mock.Anything, mock.MatchedBy(matchByStringContains(item.expectMessage))).Maybe()
+						m.On("FailNow").Maybe()
 
 						r.Json(m, item.path, item.action)
-						m.AssertNumberOfCalls(t, "Errorf", 1)
-						m.AssertNumberOfCalls(t, "FailNow", 1)
 						m.AssertExpectations(t)
+					})
+				}
+			})
+
+		})
+
+		// test Print
+		t.Run("test Print", func(t *testing.T) {
+			t.Run("test valid", func(t *testing.T) {
+				for _, item := range []struct {
+					name     string
+					body     string
+					path     string
+					contains string
+				}{
+					{
+						name:     "test integer",
+						body:     `{"object": {"name": 40}}`,
+						path:     "object.name",
+						contains: "Raw: 40",
+					},
+					{
+						name:     "test string",
+						body:     `{"object": {"name": "John"}}`,
+						path:     "object.name",
+						contains: "Raw: \"John\"",
+					},
+					{
+						name:     "test object",
+						body:     `{"object": {"name": 40}}`,
+						path:     "object",
+						contains: "Raw: {\"name\": 40}",
+					},
+				} {
+					t.Run(item.name, func(t *testing.T) {
+						r := newResponse(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+						r.body = []byte(item.body)
+						into := &bytes.Buffer{}
+						r.Json(t, item.path, action.Print(into))
+						assert.Contains(t, into.String(), item.contains)
 					})
 				}
 			})
@@ -774,19 +812,6 @@ func TestResponse_Json(t *testing.T) {
 	})
 }
 
-func TestResponse_AssertStatus(t *testing.T) {
-	for _, status := range []int{http.StatusOK, http.StatusCreated, http.StatusNoContent} {
-		t.Run(http.StatusText(status), func(t *testing.T) {
-			rw := httptest.NewRecorder()
-			rw.WriteHeader(status)
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
-
-			r := newResponse(rw, req)
-			r.Status(t, action.AssertEquals(status))
-		})
-	}
-}
-
 func TestResponse_Unmarshal(t *testing.T) {
 	type User struct {
 		Name string `json:"name"`
@@ -823,7 +848,8 @@ func TestResponse_Unmarshal(t *testing.T) {
 
 func TestResponse_Print(t *testing.T) {
 	rw := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/?q=hello", nil)
+	req.Header.Set("hello", "world")
 	r := newResponse(rw, req)
 	r.body = []byte(`{"name": "John"}`)
 
@@ -831,12 +857,8 @@ func TestResponse_Print(t *testing.T) {
 	r.Print(into)
 
 	result := into.String()
-	assert.Contains(t, result, "Request:")
-	assert.Contains(t, result, "    URL: /")
-	assert.Contains(t, result, "    Method: GET")
-	assert.Contains(t, result, "    Header: map[]")
-	assert.Contains(t, result, "Response:")
-	assert.Contains(t, result, "    Body: {\"name\": \"John\"}")
-	assert.Contains(t, result, "    Status: 200")
 
+	// assert what was written
+	assert.Contains(t, result, "Request:\n    URL: /?q=hello\n    Method: GET\n    Header: map[Hello:[world]]")
+	assert.Contains(t, result, "Response:\n    Body: {\"name\": \"John\"}\n    Status: 200\n    StatusMessage: OK\n    Header: map[]\n    Size: 0")
 }

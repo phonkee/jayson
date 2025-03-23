@@ -4,92 +4,16 @@ Simple testing package for restful APIs.
 
 # Usage
 
-Tester provides a simple way to test restful APIs. It is based on the `testing` package and provides a simple way to test APIs.
-You need to call `WithAPI` function with dependencies and then you provide closure where API will be available.
-This library supports http.Handler testing as well as http server testing (Address).
+Tester provides a simple way to test restful APIs. It is based on the `testing` package and provides a simple way to
+test APIs.
+It provides two main functions:
 
-```go
-package example_test
+- `WithHttpServer` - starts a http server and runs given closure with the server
+- `WithAPI` - runs given closure with the API client
 
-import (
-	"context"
-	"encoding/json"
-	"github.com/gorilla/mux"
-	"github.com/phonkee/jayson/tester"
-	"github.com/phonkee/jayson/tester/action"
-	"github.com/phonkee/jayson/tester/resolver"
-	"net/http"
-	"testing"
-)
+# Example
 
-var (
-	// we will use gorilla mux router
-	router = mux.NewRouter()
-)
-
-func init() {
-	// create a health check endpoint
-	router.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(HealthResponse{
-			StatusDatabase: "ok",
-		}); err != nil {
-			panic(err)
-		}
-	}).Methods(http.MethodGet).Name("api:v1:health")
-}
-
-// HealthResponse is a simple response struct that returns status
-type HealthResponse struct {
-	StatusDatabase string `json:"status_db"`
-}
-
-func TestHealthHandler(t *testing.T) {
-	tester.WithAPI(t, &Deps{
-		Resolver: resolver.NewGorillaMuxResolver(t, router), // url resolver for gorilla mux
-		Handler:  router,                                    // use router as http.Handler
-	}, func(api *API) {
-		var status string
-
-		// unmarshal key from json object to value
-		api.Get(t, api.ReverseURL(t, "api:v1:health")).
-			Do(t, context.TODO()).
-			Status(t, action.Unmarshal(&status)).
-			//Unmarshal(t,
-			//	APIObject(t, "status", &status), // APIObject deconstructs json object to value given key value pairs
-			//)
-			assert.Equal(t, "ok", status)
-
-		// direct unmarshal to struct
-		response := HealthResponse{}
-		api.Get(t, api.ReverseURL(t, "api:v1:health")).
-			Do(t, context.TODO()).
-			Status(t, action.AssertEqual(http.StatusOK)).
-			Json(t, "", action.Unmarshal(&response))
-
-		// assert json equals
-		api.Get(t, api.ReverseURL(t, "api:v1:health")).
-			Do(t, context.TODO()).
-			Status(t, action.AssertEqual(http.StatusOK)).
-			Json(t, "", action.AssertEqual(HealthResponse{
-				StatusDatabase: "ok",
-			}))
-
-		// assert object key
-		api.Get(t, api.ReverseURL(t, "api:v1:health")).
-			Do(t, context.TODO()).
-			Status(t, action.AssertEqual(http.StatusOK)).
-			Json(t, "status_db", action.AssertEqual("ok"))
-	})
-}
-
-```
-
-# Response
-
-Response provides multiple methods to inspect response.
-Each accepts action which can be one from Assert actions or Unmarshal actions.
-Let me show example of all of them
+Let's see an example of how to use the tester package.
 
 ```go
 package main
@@ -133,13 +57,13 @@ func TestTester(t *testing.T) {
 			api.Get(t, api.ReverseURL(t, "api:v1:users:list")).
 				Do(t, ctx).
 				Status(t, action.AssertEquals(http.StatusOK)).
-				Json(t, "users.0.name", action.AssertNotEquals("Johnson Doe")).
+				Json(t, "users.0.name", action.AssertNot(action.AssertEquals("Johnson Doe"))).
 				Json(t, "users.0.name", action.AssertEquals("John Doe")).
 				Json(t, "users.0", action.AssertEquals(json.RawMessage(`{"id":1,"name":"John Doe"}`))).
 				Json(t, "users.0.name", action.AssertIn("John Doe", "Peter Vrba")).
-				Json(t, "users.0.name", action.AssertNotIn("Johnson Doe", "Peter Vrba")).
+				Json(t, "users.0.name", action.AssertNot(action.AssertIn("Johnson Doe", "Peter Vrba"))).
 				Json(t, "users", action.AssertExists()).
-				Json(t, "user", action.AssertNotExists()).
+				Json(t, "user", action.AssertNot(action.AssertExists())).
 				Json(t, "users", action.AssertLen(1)).
 				Json(t, "users.0", action.AssertKeys("id", "name")).
 				Json(t, "users.0.id", action.AssertGte(1)).
@@ -155,9 +79,9 @@ func TestTester(t *testing.T) {
 				Json(t, "users.0.id", action.AssertAny(
 					action.AssertGte(0),
 					action.AssertLte(0),
-					action.AssertNotExists(),
+					action.AssertNot(action.AssertExists()),
 				)).
-				Json(t, "users.0.id", action.AssertRegex(
+				Json(t, "users.0.id", action.AssertRegexMatch(
 					regexp.MustCompile(`\d+`),
 				)).
 				Json(t, "users.0", action.UnmarshalObjectKeys(action.KV{
@@ -178,9 +102,8 @@ func TestTester(t *testing.T) {
 
 ```
 
-
 # TODO
-- [ ] AssertZero - assert zero value (0, "", nil, [], {}, false)
+
 
 # Author
 

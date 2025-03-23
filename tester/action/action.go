@@ -32,25 +32,34 @@ import (
 
 // actionFunc is a helper to create actions from functions
 type actionFunc struct {
-	run       func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error
-	value     func(t require.TestingT) (any, bool)
-	support   []Support
-	baseError error
+	run          func(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error
+	value        func(t require.TestingT) (any, bool)
+	support      []Support
+	supportsFunc func(supports Support) bool
+	baseError    error
 }
 
+// BaseError returns the base error for the action
 func (a *actionFunc) BaseError() error {
 	return a.baseError
 }
 
-func (a *actionFunc) Supports(support Support) bool {
+// Supports returns true if the action supports the given type
+// If supportsFunc is set, it will be used to determine if the action supports the given type
+// this is used to support custom types
+func (a *actionFunc) Supports(what Support) bool {
+	if a.supportsFunc != nil {
+		return a.supportsFunc(what)
+	}
 	for _, s := range a.support {
-		if s == support {
+		if s == what {
 			return true
 		}
 	}
 	return false
 }
 
+// Value calls the value function if it is set
 func (a *actionFunc) Value(t require.TestingT) (any, bool) {
 	if a.value != nil {
 		return a.value(t)
@@ -58,7 +67,9 @@ func (a *actionFunc) Value(t require.TestingT) (any, bool) {
 	return nil, false
 }
 
+// Run calls the run function if it is set
 func (a *actionFunc) Run(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
+	// check if error is ErrAction, otherwise we need to wrap it
 	if a.run != nil {
 		return a.run(t, ctx, value, raw, err)
 	}

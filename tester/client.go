@@ -40,7 +40,7 @@ func WithAPI(t require.TestingT, deps *Deps, fn func(APIClient)) {
 }
 
 // newClient creates a new *client instance
-func newClient(t require.TestingT, deps *Deps) *client {
+func newClient(_ require.TestingT, deps *Deps) *client {
 	return &client{
 		deps: deps,
 	}
@@ -73,7 +73,7 @@ func (c *client) Put(t require.TestingT, path string) APIRequest {
 
 // Request does a response to the APIClient
 func (c *client) Request(t require.TestingT, method string, path string) APIRequest {
-	return newRequest(method, path, c.deps)
+	return newRequest(t, method, path, c.deps)
 }
 
 // ReverseURL creates a path by given url name and resolver extra

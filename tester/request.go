@@ -28,82 +28,64 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
+	"os"
 	"strings"
 )
 
 // newRequest creates a new *request instance
-func newRequest(method, path string, deps *Deps) *request {
+func newRequest(t TestingT, method, path string, deps *Deps) *request {
+	req, err := http.NewRequest(method, path, nil)
+	require.NoError(t, err, "failed to create request: %v", err)
+
+	// set content type to json
+	req.Header.Set(ContentTypeHeader, ContentTypeJSON)
+
 	return &request{
-		method: method,
-		path:   path,
-		deps:   deps,
-		header: make(http.Header),
-		query:  make(url.Values),
+		deps: deps,
+		req:  req,
 	}
 }
 
 // request is the implementation of APIRequest
 type request struct {
-	method string
-	path   string
-	body   io.Reader
-	deps   *Deps
-	query  url.Values
-	header http.Header
+	deps *Deps
+	req  *http.Request
 }
 
 // Body sets the body of the request
 func (r *request) Body(t require.TestingT, body any) APIRequest {
 	switch body.(type) {
 	case string:
-		r.body = strings.NewReader(body.(string))
+		r.req.Body = NewReadCloser(strings.NewReader(body.(string)))
 	case []byte:
-		r.body = strings.NewReader(string(body.([]byte)))
+		r.req.Body = NewReadCloser(strings.NewReader(string(body.([]byte))))
 	case io.Reader:
-		r.body = body.(io.Reader)
+		r.req.Body = NewReadCloser(body.(io.Reader))
 	default:
-		buffer := new(bytes.Buffer)
-		assert.NoErrorf(t, json.NewEncoder(buffer).Encode(body), "cannot marshal to json: %v", body)
-		r.body = buffer
+		if body == nil {
+			r.req.Body = nil
+		} else {
+			buffer := new(bytes.Buffer)
+			assert.NoErrorf(t, json.NewEncoder(buffer).Encode(body), "cannot marshal to json: %v", body)
+			r.req.Body = NewReadCloser(buffer)
+		}
 	}
 	return r
 }
 
-// Do does the request and returns the response
+// Do the request and returns the response
 func (r *request) Do(t require.TestingT, ctx context.Context) APIResponse {
-	req, err := http.NewRequestWithContext(ctx, r.method, r.path, r.body)
-	assert.NoErrorf(t, err, "failed to create request: %v", err)
-
-	// set content type to json
-	r.header.Set(ContentTypeHeader, ContentTypeJSON)
-
-	// set headers to request
-	req.Header = r.header
+	// add context to request
+	req := r.req.WithContext(ctx)
 
 	// prepare recorder for response
 	rw := httptest.NewRecorder()
-
-	// merge query if present
-	if len(r.query) > 0 {
-		q := req.URL.Query()
-		for key, values := range r.query {
-			for _, value := range values {
-				q.Add(key, value)
-			}
-		}
-		req.URL.RawQuery = q.Encode()
-	}
-
-	// add header if present
-	if len(r.header) > 0 {
-		req.Header = r.header
-	}
 
 	// do the request to the address or handler
 	if r.deps.Address != "" {
@@ -121,6 +103,63 @@ func (r *request) Do(t require.TestingT, ctx context.Context) APIResponse {
 	}
 
 	return result
+}
+
+// Header sets the header of the request
+func (r *request) Header(_ require.TestingT, key, value string) APIRequest {
+	r.req.Header.Add(key, value)
+	return r
+}
+
+// Print prints the response to given writer, if not given, it prints to stdout
+func (r *request) Print(writer ...io.Writer) APIRequest {
+	var w io.Writer
+	if len(writer) > 0 && writer[0] != nil {
+		w = writer[0]
+	} else {
+		w = os.Stdout
+	}
+
+	// printf is a helper function to print formatted output and ignore errors
+	printf := func(format string, args ...any) {
+		_, _ = fmt.Fprintf(w, format+"\n", args...)
+	}
+	printf("Print:")
+	printf("  Request:")
+	printf("    URL: %v", r.req.URL.String())
+	printf("    Method: %v", r.req.Method)
+	printf("    Header: %v", r.req.Header)
+	if body, ok := r.getBody(nil); ok {
+		printf("    Body: %v", string(body))
+	} else {
+		printf("    Body: <nil>")
+	}
+
+	return r
+}
+
+// Query sets the query of the request
+func (r *request) Query(_ require.TestingT, key, value string) APIRequest {
+	q := r.req.URL.Query()
+	q.Add(key, value)
+	r.req.URL.RawQuery = q.Encode()
+	return r
+}
+
+// getBody returns the body of the request and sets it to the request
+func (r *request) getBody(t require.TestingT) ([]byte, bool) {
+	// check if body is nil
+	if r.req.Body == nil {
+		return nil, false
+	}
+
+	body, err := io.ReadAll(r.req.Body)
+	require.NoErrorf(t, err, "failed to read request body: %v", err)
+
+	// set body to request
+	r.req.Body = NewReadCloser(bytes.NewReader(body))
+
+	return body, true
 }
 
 // doAddress does the request to the address
@@ -160,17 +199,4 @@ func (r *request) doHandler(t require.TestingT, rw http.ResponseWriter, req *htt
 	assert.NotPanicsf(t, func() {
 		r.deps.Handler.ServeHTTP(rw, req)
 	}, "handler panicked")
-}
-
-// Header sets the header of the request
-func (r *request) Header(t require.TestingT, key, value string) APIRequest {
-	r.header.Add(key, value)
-	return r
-}
-
-// Query sets the query of the request
-func (r *request) Query(t require.TestingT, key, value string) APIRequest {
-	r.query = make(url.Values)
-	r.query.Add(key, value)
-	return r
 }

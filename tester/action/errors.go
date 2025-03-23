@@ -69,4 +69,5 @@ var (
 	ErrActionAssertNot           = newErrAction("AssertNot")
 	ErrActionAssertContains      = newErrAction("AssertContains")
 	ErrActionAssertNil           = newErrAction("AssertNil")
+	ErrActionPath                = newErrAction("Path")
 )

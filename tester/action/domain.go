@@ -43,6 +43,8 @@ const (
 
 // Action is an action that can be performed on the response. It has currently 2 meanings: Assertion and Unmarshal.
 // TODO: add path or id to run so we can print better error messages?
+//
+//go:generate mockery --name Action --filename action.go
 type Action interface {
 	Run(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error
 	Value(t require.TestingT) (any, bool)

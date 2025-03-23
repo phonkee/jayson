@@ -33,7 +33,7 @@ import (
 
 func TestJsonPath(t *testing.T) {
 	t.Run("test valid", func(t *testing.T) {
-		ac := JsonPath("status", AssertEquals("ok"))
+		ac := AssertJsonPath("status", AssertEquals("ok"))
 		ctx := context.WithValue(context.Background(), ContextKeyUnmarshalActionValue, func(t require.TestingT, raw json.RawMessage, a Action) (any, error) {
 			var status string
 			if err := json.Unmarshal(raw, &status); err != nil {

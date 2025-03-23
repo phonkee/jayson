@@ -33,8 +33,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// JsonPath maps json path to given action it is relative to caller
-func JsonPath(path string, action Action) Action {
+// AssertJsonPath matches the JSON sub path. This is only used in advanced scenarios.
+func AssertJsonPath(path string, action Action) Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, _ any, raw json.RawMessage, err error) error {
 			if action == nil {

@@ -96,7 +96,11 @@ func TestTester(t *testing.T) {
 					"name": &userObj.Name,
 				})).
 				Json(t, "users.0.admin", action.AssertZero()).
-				Json(t, "users.0.name", action.AssertNot(action.AssertZero()))
+				Json(t, "users.0.name", action.AssertNot(action.AssertZero())).
+				Json(t, "users.0", action.AssertAll(
+					action.AssertJsonPath("name", action.AssertEquals("John Doe")),
+					action.AssertJsonPath("id", action.AssertEquals(1)),
+				))
 
 			// test Unmarshal
 			assert.Equal(t, user.ID, 1)

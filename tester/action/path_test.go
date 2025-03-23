@@ -43,5 +43,4 @@ func TestJsonPath(t *testing.T) {
 		})
 		require.NoError(t, ac.Run(t, ctx, nil, json.RawMessage(`{"status":"ok"}`), nil))
 	})
-
 }

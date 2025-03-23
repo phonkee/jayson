@@ -40,7 +40,7 @@ func WithAPI(t require.TestingT, deps *Deps, fn func(APIClient)) {
 }
 
 // newClient creates a new *client instance
-func newClient(t require.TestingT, deps *Deps) *client {
+func newClient(_ require.TestingT, deps *Deps) *client {
 	return &client{
 		deps: deps,
 	}

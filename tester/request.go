@@ -139,7 +139,7 @@ func (r *request) Print(writer ...io.Writer) APIRequest {
 }
 
 // Query sets the query of the request
-func (r *request) Query(t require.TestingT, key, value string) APIRequest {
+func (r *request) Query(_ require.TestingT, key, value string) APIRequest {
 	q := r.req.URL.Query()
 	q.Add(key, value)
 	r.req.URL.RawQuery = q.Encode()

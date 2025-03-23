@@ -43,7 +43,7 @@ type User struct {
 	Admin bool   `json:"admin"`
 }
 
-func ListUsers(w http.ResponseWriter, r *http.Request) {
+func ListUsers(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write([]byte(`{"users": [{"id":1,"name":"John Doe", "admin": false}]}`))

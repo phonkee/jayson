@@ -33,7 +33,7 @@ import (
 )
 
 // ExtractJsonPath extracts the json path from the given raw json
-func ExtractJsonPath(t require.TestingT, jsonPath string, raw json.RawMessage) (json.RawMessage, error) {
+func ExtractJsonPath(_ require.TestingT, jsonPath string, raw json.RawMessage) (json.RawMessage, error) {
 	jsonPath = strings.TrimSpace(jsonPath)
 
 	var (

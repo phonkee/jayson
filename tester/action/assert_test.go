@@ -261,7 +261,7 @@ func TestAssertNil(t *testing.T) {
 }
 
 func TestAssertNot(t *testing.T) {
-	t.Run("test valid values", func(t *testing.T) {
+	t.Run("test invalid values", func(t *testing.T) {
 		for _, test := range []struct {
 			name   string
 			action Action
@@ -270,16 +270,17 @@ func TestAssertNot(t *testing.T) {
 		}{
 			{name: "test equals string", action: AssertEquals("nope"), value: "world", raw: json.RawMessage(`"world"`)},
 			{name: "test gt int", action: AssertGt(10), value: 5, raw: json.RawMessage(`5`)},
+			{name: "test nil", action: AssertNil(), value: nil, raw: json.RawMessage("42")},
 		} {
 			t.Run(test.name, func(t *testing.T) {
 				an := AssertNot(test.action)
 				m := mocks.NewTestingT(t)
-				require.NoError(t, an.Run(m, context.Background(), test.value, nil, nil))
+				require.NoError(t, an.Run(m, context.Background(), test.value, test.raw, nil))
 			})
 		}
 
 	})
-	t.Run("test invalid values", func(t *testing.T) {
+	t.Run("test valid values", func(t *testing.T) {
 		for _, test := range []struct {
 			name   string
 			action Action
@@ -288,11 +289,12 @@ func TestAssertNot(t *testing.T) {
 		}{
 			{name: "test equals string", action: AssertEquals("hello"), value: "hello", raw: json.RawMessage(`"hello"`)},
 			{name: "test gt int", action: AssertGt(1), value: 5, raw: json.RawMessage(`5`)},
+			{name: "test nil", action: AssertNil(), value: 42, raw: json.RawMessage("null")},
 		} {
 			t.Run(test.name, func(t *testing.T) {
 				an := AssertNot(test.action)
 				m := mocks.NewTestingT(t)
-				require.Error(t, an.Run(m, context.Background(), test.value, nil, nil))
+				require.Error(t, an.Run(m, context.Background(), test.value, test.raw, nil))
 			})
 		}
 	})

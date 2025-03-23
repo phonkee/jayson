@@ -39,7 +39,7 @@ import (
 )
 
 // AssertBetween asserts that given integer value is between the values (inclusive)
-func AssertBetween[T constraints.Integer](min, max T) Action {
+func AssertBetween[T comparable](min, max T) Action {
 	return &actionFunc{
 		value: func(t require.TestingT) (any, bool) {
 			return min, true
@@ -61,7 +61,7 @@ func AssertBetween[T constraints.Integer](min, max T) Action {
 	}
 }
 
-// AssertContains asserts value contains the given value
+// AssertContains asserts json raw message contains the given string
 func AssertContains(contains string) Action {
 	return &actionFunc{
 		run: func(t require.TestingT, ctx context.Context, v any, raw json.RawMessage, err error) error {
@@ -179,8 +179,9 @@ func AssertIn[T any](values ...T) Action {
 			if err != nil {
 				return err
 			}
-			ok, found := containsElement(values, v)
-			if !ok || !found {
+
+			// check if value is in the list of values
+			if !assert.Contains(&requireTestingT{}, values, v) {
 				return fmt.Errorf("%w: expected value %#v to be in %#v", ErrActionAssertIn, v, values)
 			}
 

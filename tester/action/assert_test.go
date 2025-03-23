@@ -278,7 +278,6 @@ func TestAssertNot(t *testing.T) {
 				require.NoError(t, an.Run(m, context.Background(), test.value, test.raw, nil))
 			})
 		}
-
 	})
 	t.Run("test valid values", func(t *testing.T) {
 		for _, test := range []struct {

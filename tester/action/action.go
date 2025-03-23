@@ -69,6 +69,7 @@ func (a *actionFunc) Value(t require.TestingT) (any, bool) {
 
 // Run calls the run function if it is set
 func (a *actionFunc) Run(t require.TestingT, ctx context.Context, value any, raw json.RawMessage, err error) error {
+	// check if error is ErrAction, otherwise we need to wrap it
 	if a.run != nil {
 		return a.run(t, ctx, value, raw, err)
 	}

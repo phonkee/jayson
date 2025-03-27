@@ -25,7 +25,9 @@
 package jayson
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"github.com/phonkee/jayson/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -303,5 +305,17 @@ func TestExtObjectUnwrap(t *testing.T) {
 		obj := make(map[string]any)
 		ext.ExtendResponseObject(context.Background(), obj)
 		assert.Equal(t, map[string]any{"key": "hello", "other": "world", "OmitEmpty": true}, obj)
+	})
+	t.Run("test json.RawMessage", func(t *testing.T) {
+		data := json.RawMessage(`{"key":"hello", "other":"world"}`)
+		ext := ExtChain(
+			ExtObjectUnwrap(data),
+			ExtObjectKeyValue("one", "two"),
+		)
+		obj := make(map[string]any)
+		assert.True(t, ext.ExtendResponseObject(context.Background(), obj))
+		var buffer bytes.Buffer
+		assert.NoError(t, json.NewEncoder(&buffer).Encode(obj))
+		assert.JSONEq(t, `{"key":"hello", "other":"world", "one": "two"}`, buffer.String())
 	})
 }

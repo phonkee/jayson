@@ -26,6 +26,7 @@ package jayson
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -194,6 +195,11 @@ func ExtObjectKeyValuef(key string, format string, args ...any) Extension {
 	)
 }
 
+var (
+	// jsonRawMessageType is the type of json.RawMessage
+	jsonRawMessageType = reflect.TypeOf(json.RawMessage{})
+)
+
 // ExtObjectUnwrap is an Extension that converts the given object to the response object.
 // It is useful if you want to add key/values to the response object (by altering it via Extensions).
 // If the object is a struct, it will be converted to a map[string]any.
@@ -216,7 +222,21 @@ func ExtObjectUnwrap(obj any) Extension {
 			objMap[fmt.Sprintf("%v", key)] = val.MapIndex(value).Interface()
 		}
 	default:
-		objMap = nil
+		// check some types here
+		switch val.Type() {
+		case jsonRawMessageType: // json.RawMessage can be deconstructed, so we parse it to a map[string]json.RawMessage
+			// custom handling
+			var into map[string]json.RawMessage
+			if err := json.Unmarshal(val.Bytes(), &into); err == nil {
+				for k, v := range into {
+					objMap[k] = v
+				}
+			} else {
+				objMap = nil
+			}
+		default:
+			objMap = nil
+		}
 	}
 
 	return extWithResponseTypes(
